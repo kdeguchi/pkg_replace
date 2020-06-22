@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200622
+PKG_REPLACE_VERSION=20200623
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -560,7 +560,6 @@ get_require_pkgnames() {
 
 get_binary_pkgname() {
 	local __binary_pkgname
-	load_make_vars
 	__binary_pkgname=$(${PKG_QUERY} -F $2 '%n-%v')
 	if isempty ${__binary_pkgname}; then
 		warn "'$2' is not a valid package."
