@@ -1,0 +1,16 @@
+About pkg_replace
+
+"pkg_replace" is written by Securedog <securedog@users.sourceforge.jp>.
+Thanks to Securedog.
+
+pkg_replace is compatible "portupgrade", and shell script in FreeBSD.
+However, this software has not been maintaiend for long time. So, I
+have modified pkg_replace to work with the pkgng.
+
+Bugs of this software, The abilities to add, etc., please report to
+"Ken DEGUCHI <kdeguchi@sz.tokoha-u.ac.jp>".
+
+The original is "pkg_replace 2008/04/03".
+See, http://sourceforge.jp/cvs/view/portutil/pkg_replace/
+
+This software license is public domain.

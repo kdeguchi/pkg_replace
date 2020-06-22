@@ -1,0 +1,296 @@
+.\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
+.\"
+.\" Modified by Ken DEGUCHI (June 22, 2020)"
+.Dd June 22, 2020
+.Dt PKG_REPLACE 1
+.Os
+.Sh NAME
+.Nm pkg_replace
+.Nd a utility for upgrading installed packages
+.Sh SYNOPSIS
+.Nm
+.Op Fl habBcCdfFiJknNOpPPqrRuvVwW
+.Op Fl \-automatic
+.Op Fl \-batch
+.Op Fl \-clean
+.Op Fl \-cleanup
+.Op Fl \-config
+.Op Fl \-debug
+.Op Fl \-force-config
+.Op Fl \-noclean
+.Op Fl \-nocleanup
+.Op Fl \-noconfig
+.Op Fl \-version
+.Op Fl j Ar jobs
+.Op Fl l Ar file
+.Op Fl L Ar prefix
+.Op Fl m Ar make_args
+.Op Fl M Ar make_env
+.Op Fl x Ar pkgname
+.Oo
+.Op Ar pkgname\fR[=\fIpackage\fR]
+.Op Ar package
+.Op Ar pkgorigin
+.Ar ...
+.Oc
+.Sh DESCRIPTION
+The
+.Nm
+command is used to upgrade installed packages.
+.Sh OPTIONS
+The following options are supported:
+.Bl -tag -width "-l FILE"
+.Pp
+.It Fl h
+Show help and exit.
+.Pp
+.It Fl a
+Do with all the installed packages.
+.Pp
+.It Fl b
+Keep backup packages of the old versions.
+By default, the created backup package will be deleted after installation.
+.Pp
+.It Fl B
+Do not backup old packages.
+.Pp
+.It Fl \-automatic
+Set automatic flag for the package.
+This affects the operation of pkg-autoremove(8).
+.Pp
+.It Fl \-batch
+Run an upgrading process in a batch mode (with BATCH=yes).
+.Pp
+.It Fl c , Fl \-config
+Do
+.Dq Li make config-conditional
+before build.
+.It Fl C , Fl \-force-config
+Do
+.Dq Li make config
+before build.
+.Pp
+.It Fl \-clean
+Do
+.Dq Li make clean
+before build.
+.Pp
+.It Fl \-cleanup
+Do
+.Dq Li make clean
+after build.
+This is the default.
+.Pp
+.It Fl d , Fl R
+In addition to the specified packages,
+replace all packages that required by those packages as well.
+.Pp
+.It Fl \-debug
+Debug mode.
+Execute with
+.Dq Li set -x
+option.
+.Pp
+.It Fl f
+Force to replace packages.
+.Pp
+.It Fl F
+Fetch distfiles or packages, do not replace.
+.Pp
+.It Fl i
+Turn on interactive mode.
+.Pp
+.It Fl j Ar jobs
+Number of parallel jobs.
+Default value gets from `sysctl -n hw.ncpu`.
+.Pp
+.It Fl J
+Do not install the target packages, but install the dependencies.
+.Pp
+.It Fl k
+Force the upgrade of a package even if some of the requisite packages have failed to upgrade in advance.
+.Pp
+.It Fl l Ar FILE
+Save the results to
+.Ar FILE .
+By default,
+.Nm
+does not save results.
+.Pp
+.It Fl L Ar PREFIX
+Save the logs in the files that begins with
+.Ar PREFIX .
+.It Fl m Ar ARGS
+Specify arguments to append to each
+.Xr make 1
+command.
+Please see section
+.Ar EXAMPLES.
+.Pp
+.It Fl M Ar ARGS
+Specify arguments to prepend to each
+.Xr make 1
+command.
+.Pp
+.It Fl n
+Do not actually replace any packages.
+.Pp
+.It Fl \-noconfig
+Do not read the configuration file.
+.Pp
+.It Fl N
+Install new packages, do not replace.
+.Pp
+.It Fl O
+Do not check the dependencies before building the target packages.
+.Pp
+.It Fl p
+Do
+.Dq Li make package .
+.Pp
+.It Fl P
+Use binary packages instead of installing from source.
+.Nm
+finds them from the directory specified by
+.Va PKGREPOSITORY ,
+and the remote site specified by
+.Va PACKAGEROOT .
+.Pp
+.It Fl PP
+Be forced to use binary packages.
+Never use the port even if a package is not available either locally or remotely.
+.Pp
+.It Fl r
+In addition to the specified packages,
+replace all packages that depend on those packages as well.
+.Pp
+.It Fl u
+Do not preserve old shared libraries.
+By default,
+.Nm
+preserves old shared libraries in
+.Va PKGCOMPATDIR .
+.Pp
+.It Fl v
+Turn on verbose output.
+.Pp
+.It Fl V
+List the installed packages that need updating.
+.Pp
+.It Fl \-version
+Print pkg_replace version.
+.Pp
+.It Fl w , Fl \-noclean
+Do not
+.Dq Li make clean
+before each build.
+This is the default.
+.Pp
+.It Fl W , Fl \-nocleanup
+Do not
+.Dq Li make clean
+after each installation.
+.Pp
+.It Fl x Ar GLOB
+Do not replace packages matching the specified glob pattern.
+.Pp
+.El
+.Sh EXAMPLES
+.Bl -bullet
+.It
+pkgname examples:
+.Pp
+.Dl name-version, name and shell glob.
+.Dl glib-2.36.3_2, glib and Dq glib*
+.Pp
+.It
+pkgorigin examples:
+.Pp
+.Dl devel/glib20
+.Pp
+.It
+Path:
+.Pp
+.Dl Absolute and relative paths are allowed.
+.Pp
+.It
+Install
+.Ar glib :
+.Pp
+.Dl pkg_replace -N devel/glib20
+.It
+Install
+.Ar py-cairo
+with
+.Ar FLAVOR=py37
+.Pp
+.Dl pkg_replace -m FLAVOR=py37 -N graphics/py-cairo
+or
+.Dl pkg_replace -N graphics/py-cairo@py37
+.It
+Replace
+.Ar glib :
+.Pp
+.Dl pkg_replace glib
+.It
+Replace
+.Ar perl
+and all packages that depend on it:
+.Pp
+.Dl pkg_replace -r perl
+.It
+If the
+.Ar xterm
+package is already installed, replace it with
+.Ar xterm-220 :
+.Pp
+.Dl pkg_replace /usr/ports/packages/All/xterm-220.tbz
+.It
+Replace
+.Ar XFree86-libraries
+with
+.Ar /usr/ports/x11/xorg-libraries:
+.Pp
+.Dl pkg_replace XFree86-libraries=/usr/ports/x11/xorg-libraries
+.It
+Replace
+.Ar XFree86-libraries
+with pkgorigin
+.Ar x11/xorg-libraries:
+.Pp
+.Dl pkg_replace XFree86-libraries=x11/xorg-libraries
+.It
+Replace
+.Ar XFree86-libraries
+with
+.Ar /var/tmp/xorg-libraries-6.9.0
+package:
+.Pp
+.Dl pkg_replace XFree86-libraries=/var/tmp/xorg-libraries-6.9.0.tbz
+.It
+Replace
+.Ar graphics/py-cairo
+with
+.Ar FLAVOR=py37
+.Pp
+.Dl pkg_replace -m FLAVOR=py37 graphics/py-cairo
+or
+.Dl pkg_replace graphics/py-cairo@py37
+.El
+.Sh COMPATIBILITY
+The
+.Xr portupgrade 1
+options
+.Fl A , B , D , e , o , q , s , S , u
+and
+.Fl y
+are no longer supported.
+.Sh SEE ALSO
+.Xr portupgrade 1 ,
+.Xr pkg 8
+.Xr ports 7 ,
+.Sh AUTHORS
+.An Securedog Aq securedog@users.sourceforge.jp
+.An Ken DEGUCHI Aq kdeguchi@sz.tokoha-u.ac.jp
+.Sh BUGS
+Sure to be some.

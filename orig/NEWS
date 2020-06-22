@@ -1,0 +1,106 @@
+Call for testers: pkg_replace 0.9.0
+
+リリースに向け、テスト中の開発版です。
+コメント、バグ等があればご連絡ください。
+ダウンロードは下記の URI から。下記のスクリプトは FreeBSD 用に設定済みですので、
+適当な場所にコピーするだけで利用できます。
+
+# Revision 1.28 (20080131)
+http://portutil.sourceforge.jp/src/pkg_replace
+
+主な変更点は下記:
+
+* pkg_replace は 0.9.0 から public domain になりました。ファイル内の表記はリリースの際に修正します。
+
+pkg_replace 0.9.0 (RC2) (20080131)
+
+TODO: 引数解析部分の書き直し。
+
+* [FreeBSD] pkgdep の修正で if が正反対になっていたのを修正 (parameter not set で止まる可能性があった)。
+
+* [pkgsrc] /usr/xpg4/bin/sh での修正および /bin/sh の自動選択 (thanks to 590)。
+
+* 新規インストールの前に、既にパッケージがインストール済みかどうかの確認を追加。
+
+* 設定ファイル内のバックスラッシュを削除しないように修正 (thanks to 576)。
+
+* ``make -VPKGNAME'' から BEFOREPORTMK=yes を削除 (thanks to 580)。
+  これは、bsd.linux-rpm.mk と bsd.lua.mk を読み込む場合に問題がありました。
+
+* 設定ファイルでの、ユーザ定義の関数を利用できるようしました (thanks to 567)。
+
+  - BEFOREBUILD 等のコマンドと同様、sh(1) で書く
+  - 内部関数との衝突を避けるために、関数名には何らかの prefix をつけることを推奨
+    (次のような名前で始まる関数は安全: [A-Z_], [a-z]_, local_, my_, use?r_, conf_)
+
+  |BEFOREBUILD={
+  |  '*' => 'my_test "$@"'
+  |  '*' => 'my_make_config'
+  |}
+  |
+  |my_test() {
+  |    echo "pkgname $1"
+  |    echo "pkgorigin $2"
+  |    expr "Hello World" : '\([^ ]*\)'
+  |}
+  |
+  |my_make_config() {
+  |    case `id -u` in
+  |    0)    sudo= ;;
+  |    *)    sudo="sudo" ;;
+  |    esac
+  |    $sudo make config
+  |}
+
+pkg_replace 0.9.0 (RC1) (20080126)
+
+* 依存する ports/packages を (必要なら) 自動的にインストールするようにしました。
+  この動作は、下記 -O オプションで無効にできます。
+
+* パッケージの更新に失敗した場合、その失敗したパッケージに依存するパッケージの更新を行わないようにしました。
+  この動作は、下記 -k オプションで無効にできます。
+
+* -J (build-only) オプションの追加: ``make build'' および、依存関係の自動インストールのみを行います。
+
+* -k (keep-going) オプションの追加。
+
+* -O オプションの追加: 依存関係の自動インストールを無効にします (bsd.port.mk に任せる)。
+
+* -P オプションの改善: -P / -PP の動作が portupgrade(1) と同等になりました。
+
+* --batch オプションの追加。
+
+* +IGNOREME ファイルのサポート。
+
+* バイナリパッケージの取得に用いるプログラムを PKG_FETCH で指定できるようにしました (default: fetch)。
+
+* -l を指定しない場合でも、失敗したパッケージがあれば結果を表示するようにしました (thanks to 209)。
+
+* .install_done が残っている場合に、更新に失敗する問題を修正しました (thanks to 157)。
+
+* [DELETED] [FreeBSD] ``make -VPKGNAME'' に BEFOREPORTMK=yes を加え、僅かに高速化 (inspired by portmaster)。
+
+Known Bugs:
+
+* 依存関係で自動インストールされたパッケージについては、結果 (-l) に残りません。
+
+TODO:
+
+* 完全な POSIX sh スリクプト。これは pkgsrc への移植を助けます。
+
+* [pkgsrc] MOVED parser の追加。
+
+* [FreeBSD] --config のサポート:
+  ports からのアップグレード/インストールを行う前に、必要な ports に対して
+  ``make config / config-conditional'' を行う (portupgrade 2.4 からの実装)
+
+* 設定ファイルでの複数の条件をまとめて書けるように:
+
+  MAKE_ARGS= {
+    'print/ghostscript-gpl print/lpr-wrapper' => '-DA4'
+    '(print/ghostscript-gpl|print/lpr-wrapper)' => '-DA4'
+    '{print/ghostscript-gpl,print/lpr-wrapper}' => '-DA4'
+  }
+
+* run_rc_script, cmd_{start,stop,restart}_rc の定義を設定ファイルに移動
+  ただ、古い設定ファイルが問題になる。

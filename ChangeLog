@@ -1,0 +1,61 @@
+20200622
+*Fix flavor check in set_pkginfo_install and set_pkginfo_replace
+*Cleanup code
+
+20200618
+*Fix bug in set_pkginfo_replace
+*Fix typo PORTSIR->PORTSDIR in parse_moved
+
+20200602
+*Fix bug check package's dependencies
+
+20200522
+*Fix bugs for origin and path
+*Cleanup code
+*Support FLAVORS 'origin@flavor'
+  See pkg_replace(1)
+
+20200504
+* Support OVERLAYS
+
+20200309
+* Support FLAVOR
+  If you want to change flavor to foo, you set option '-m FLAVOR=foo'.
+
+20191220
+* Fix PKGREPOSITORY path
+
+20191018
+* Fix parse_moved bug
+
+20190827
+* Cleanup code
+* Preserve library symlinks
+
+20190425
+* Cleanup code
+* Speed up version checking by parallelization
+
+20181024:
+* Cleanup code
+
+20180927:
+* Add ChangeLog
+
+20180611:
+* Fix -C (make forceconfig) option bug
+
+20180418:
+* Cleanup code
+* Speed up and strictly check package's dependencies
+
+20180314:
+* Support pkgng only
+* Clean up code
+
+20170517:
+* Add --automatic option. This option sets automatic flag for the package.
+* Delete --noindex option, add --index option. When pkg_replace checks the
+  dependencies before building the target packages,
+  do "make package-depends-list" as default.
+  This is more strictly checking the dependencies.

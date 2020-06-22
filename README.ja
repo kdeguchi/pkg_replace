@@ -1,0 +1,21 @@
+pkg_replace について
+
+pkg_replace は Securedog <securedog@users.sourceforge.jp> さんに
+よって作成されました。あらためて、
+Securedog <securedog@users.sourceforge.jp> さんに感謝いたします。
+
+pkg_replace のよいところは、portupgrade 互換でかつ FreeBSD 標準の
+コマンドのみで動作することです。しかし、長らくメンテナンスがなされ
+ておらず、出口が FreeBSD の pkgng に対応させるように改変しました。
+よって、このソフトウェアのバグ、機能追加などは、出口
+<kdeguchi@sz.tokoha-u.ac.jp> まで報告をください。
+それほどシェルスクリプトを使いこなせるわけではないので、何か問題が
+あると思います。
+
+この改変は、pkg_replace 20080403 を元にしています。pkg_replace 0.8.0
+よりも機能が強化されています。 もともとの pkg_replace については、
+http://sourceforge.jp/cvs/view/portutil/pkg_replace/
+をご覧ください。
+
+0.9.0 からは、public domain として配布予定だったということなので、
+この改変バージョンも public domain とします。
