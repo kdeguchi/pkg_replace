@@ -1171,7 +1171,7 @@ do_install_config() {
 		return 0
 	fi
 
-	if istrue ${opt_config}; then
+	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1"
 		xtry make_config_conditional "${pkg_portdir}" || {
 			err="config-conditional error"
@@ -1179,7 +1179,7 @@ do_install_config() {
 		}
 	fi
 
-	if istrue ${opt_force_config}; then
+	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1"
 		xtry make_config "${pkg_portdir}" || {
 			err="config error"
@@ -1285,7 +1285,7 @@ do_replace_config() {
 		return 0
 	fi
 
-	if istrue ${opt_config}; then
+	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1"
 		xtry make_config_conditional "${pkg_portdir}" || {
 			err="config-conditional error"
@@ -1294,7 +1294,7 @@ do_replace_config() {
 		result="done"
 	fi
 
-	if istrue ${opt_force_config}; then
+	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1"
 		xtry make_config "${pkg_portdir}" || {
 			err="config error"
