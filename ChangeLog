@@ -1,5 +1,5 @@
 20200623
-*If pkg_binary set, do not run make_config and make_config_conditional
+*If pkg_binary is set, do not run make_config and make_config_conditional
 *Cleanup code
 
 20200622
