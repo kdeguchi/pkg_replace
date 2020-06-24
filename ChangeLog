@@ -1,3 +1,7 @@
+20200623
+*If pkg_binary set, do not run make_config and make_config_conditional
+*Cleanup code
+
 20200622
 *Fix flavor check in set_pkginfo_install and set_pkginfo_replace
 *Cleanup code
