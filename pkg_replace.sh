@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200623
+PKG_REPLACE_VERSION=20200701
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -426,7 +426,7 @@ run_config_script() {
 	local _command
 
 	get_config '_command' "$1" '; '
-	if ! isempty ${_command}; then
+	if istrue ${_command}; then
 		info "Executing the $1 command: ${_command}"
 		( set +efu -- "${2:-${pkg_name-}}" "${3:-${pkg_origin-}}"; eval "${_command}" )
 	fi
@@ -460,7 +460,7 @@ cmd_restart_rc() {
 }
 
 load_config() {
-	if ! isempty ${1-} && ! istrue ${opt_noconf}; then
+	if istrue ${1-} && isempty ${opt_noconf}; then
 		istrue ${opt_verbose} && info "Loading $1"
 
 		parse_config "$1" || {
@@ -475,14 +475,14 @@ load_make_vars() {
 	PKG_MAKE_ARGS="${opt_make_args:+${opt_make_args} }${PKG_MAKE_ARGS}"
 	case "${PKG_MAKE_ARGS}" in
 		*FLAVOR=*)	pkg_flavor=${PKG_MAKE_ARGS##*FLAVOR=}; pkg_flavor=${pkg_flavor% *} ;;
-		*)	! isempty "${pkg_flavor}" &&
+		*)	istrue "${pkg_flavor}" &&
 			PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}" ;;
 	esac
 	get_config 'PKG_MAKE_ENV' 'MAKE_ENV'
-	! isempty "${opt_maxjobs}" &&
+	istrue "${opt_maxjobs}" &&
 		PKG_MAKE_ENV="${PKG_MAKE_ENV} MAKE_JOBS_NUMBER_LIMIT=${opt_maxjobs}"
 	PKG_MAKE_ENV="${opt_make_env:+${opt_make_env} }${PKG_MAKE_ENV}"
-	! isempty "${PKG_MAKE_ENV}" && PKG_MAKE_ENV="env ${PKG_MAKE_ENV} "
+	istrue "${PKG_MAKE_ENV}" && PKG_MAKE_ENV="env ${PKG_MAKE_ENV} "
 	PKG_MAKE="${PKG_MAKE_ENV}${MAKE}${PKG_MAKE_ARGS:+ ${PKG_MAKE_ARGS}}"
 }
 
@@ -518,7 +518,7 @@ get_pkgname_from_portdir() {
 	local __pkgname __flavor 
 	load_make_vars
 	[ ! -d "$2" ] && return 1
-	! isempty ${pkg_flavor} && {
+	istrue ${pkg_flavor} && {
 		case "$(cd "$2" && ${PKG_MAKE} -VFLAVORS)" in
 		*${pkg_flavor}*)	;;
 		*)	warn "FLAVOR=${pkg_flavor} is not exist!"; exit 1 ;;
@@ -666,7 +666,7 @@ create_tmpdir() {
 }
 
 clean_tmpdir() {
-	if ! isempty ${tmpdir}; then
+	if istrue ${tmpdir}; then
 		try rmdir "${tmpdir}" ||
 			warn "Couldn't remove the working direcotry: ${tmpdir}"
 		tmpdir=
@@ -866,7 +866,7 @@ fetch_package() {
 
 	load_env_vars
 
-	if ! isempty ${PACKAGESITE-}; then
+	if istrue ${PACKAGESITE-}; then
 		_uri="${PACKAGESITE}${_pkg}"
 	else
 		_uri_path="/$(${PKG_CONFIG} abi)/latest/All/"
@@ -942,7 +942,7 @@ preserve_libs() {
 			[ -f "${_X}" ] && preserved_files="${preserved_files} ${_X}" ;;
 		esac
 	done
-	if ! isempty ${preserved_files}; then
+	if istrue ${preserved_files}; then
 		info "Preserving the shared libraries"
 		create_dir "${PKGCOMPATDIR}" || return 1
 		try cp -af ${preserved_files} "${PKGCOMPATDIR}" || return 1
@@ -951,7 +951,7 @@ preserve_libs() {
 
 clean_libs() {
 	local _del_files _dest _X
-	if ! istrue ${opt_preserve_libs} || isempty ${preserved_files}; then
+	if isempty ${opt_preserve_libs} || isempty ${preserved_files}; then
 		return 0
 	fi
 	info "Cleaning the preserved shared libraries"
@@ -964,7 +964,7 @@ clean_libs() {
 			info "Keeping ${_X} as ${_dest}"
 		fi
 	done
-	if ! isempty ${_del_files}; then
+	if istrue ${_del_files}; then
 		try rm -f ${_del_files} || return 1
 	fi
 }
@@ -998,7 +998,7 @@ parse_moved() {
 		fi
 
 		get_portdir_from_origin '_portdir' ${_new_origin}
-		! isempty ${_portdir} && eval ${_ret}=\${_new_origin} && break
+		istrue ${_portdir} && eval ${_ret}=\${_new_origin} && break
 
 	done
 }
@@ -1063,7 +1063,7 @@ show_result() {
 		_descr="${_descr:+${_descr} / }${_X}"
 	done
 
-	if ! isempty ${_mask}; then
+	if istrue ${_mask}; then
 		info "Listing the results (${_descr})"
 		while read _X; do
 			case ${_X%% *} in
@@ -1075,7 +1075,7 @@ show_result() {
 }
 
 write_result() {
-	if ! isempty "$1"; then
+	if istrue "$1"; then
 		try cp -f "${log_file}" "$1" || return 0
 	fi
 	try rm -f "${log_file}"
@@ -1313,7 +1313,7 @@ do_replace() {
 	err=; result=
 	pkg_flavor=
 
-	if ! isempty "${failed_pkgs}" && ! istrue ${opt_keep_going}; then
+	if istrue "${failed_pkgs}" && isempty ${opt_keep_going}; then
 		get_depend_pkgnames '_deps' "$1"
 		for _X in ${_deps}; do
 			case " ${failed_pkgs} " in
@@ -1492,7 +1492,7 @@ main() {
 
 	parse_args ${1+"$@"}
 
-	if ! isempty ${opt_exclude}; then
+	if istrue ${opt_exclude}; then
 		_ARGV=
 		for _ARG in ${install_pkgs}; do
 			for _X in ${opt_exclude}; do
