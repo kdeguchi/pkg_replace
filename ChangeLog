@@ -1,6 +1,3 @@
-20200701
-* ! isempty -> istrue, ! istrue -> isempty
-
 20200623
 *If pkg_binary is set, do not run make_config and make_config_conditional
 *Cleanup code
