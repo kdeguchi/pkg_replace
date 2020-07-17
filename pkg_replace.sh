@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200717
+PKG_REPLACE_VERSION=20200718
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -515,16 +515,15 @@ get_origin_from_pkgname() {
 
 get_pkgname_from_portdir() {
 	local __pkgname __flavor 
-	load_make_vars
 	[ ! -d "$2" ] && return 1
-	! isempty ${pkg_flavor} && {
-		case "$(cd "$2" && ${PKG_MAKE} -VFLAVORS)" in
-		*${pkg_flavor}*)	;;
-		'')	;;
-		*)	warn "FLAVOR=${pkg_flavor} is not exist!"; exit 1 ;;
-		esac
-	}
 	load_make_vars
+#	! isempty ${pkg_flavor} && {
+#		case X"$(cd "$2" && ${PKG_MAKE} -VFLAVORS)" in
+#		*${pkg_flavor}*)	;;
+#		X)	;;
+#		*)	warn "FLAVOR=${pkg_flavor} is not exist!"; exit 1 ;;
+#		esac
+#	}
 	__pkgname=$(cd "$2" && ${PKG_MAKE} -VPKGNAME)
 	isempty ${__pkgname} && return 1
 	eval $1=\${__pkgname}
