@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200623
+PKG_REPLACE_VERSION=20200717
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -475,9 +475,8 @@ load_make_vars() {
 	PKG_MAKE_ARGS="${opt_make_args:+${opt_make_args} }${PKG_MAKE_ARGS}"
 	case "${PKG_MAKE_ARGS}" in
 		*FLAVOR=*)	pkg_flavor=${PKG_MAKE_ARGS##*FLAVOR=}; pkg_flavor=${pkg_flavor% *} ;;
-		*)	! isempty "${pkg_flavor}" &&
-			PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}" ;;
 	esac
+	! isempty "${pkg_flavor}" && PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}"
 	get_config 'PKG_MAKE_ENV' 'MAKE_ENV'
 	! isempty "${opt_maxjobs}" &&
 		PKG_MAKE_ENV="${PKG_MAKE_ENV} MAKE_JOBS_NUMBER_LIMIT=${opt_maxjobs}"
@@ -521,6 +520,7 @@ get_pkgname_from_portdir() {
 	! isempty ${pkg_flavor} && {
 		case "$(cd "$2" && ${PKG_MAKE} -VFLAVORS)" in
 		*${pkg_flavor}*)	;;
+		'')	;;
 		*)	warn "FLAVOR=${pkg_flavor} is not exist!"; exit 1 ;;
 		esac
 	}
@@ -582,13 +582,15 @@ get_binary_flavor(){
 }
 
 get_depend_binary_pkgnames() {
-	local __origins __origin
-	__origins=
-	for __origin in $(${PKG_QUERY} -F $2 '%do'); do
-		isempty "${__origin}" && continue
-		__origins="${__origins} $(${PKG_QUERY} '%n-%v' ${__origin}):${__origin}"
+	local _origins _origin _portdir _pkgname
+	_origins=
+	for _origin in $(${PKG_QUERY} -F $2 '%do'); do
+		isempty "${_origin}" && continue
+		get_portdir_from_origin '_portdir' ${_origin}
+		get_pkgname_from_portdir '_pkgname' ${_portdir}
+		_origins="${_origins} ${_pkgname}:${_origin}"
 	done
-	eval $1=\${__origins}
+	eval $1=\${_origins}
 }
 
 set_portinfo() {
@@ -844,7 +846,7 @@ do_fetch() {
 	*/*)	cd "${_fetch_path%/*}/" || return 1 ;;
 	esac
 
-	try "${_fetch_cmd}" "${_fetch_args}" "$1"
+	try "${_fetch_cmd}" ${_fetch_args} "$1"
 
 	if [ ! -s "${_fetch_path}" ]; then
 		warn "Failed to fetch: $1"
@@ -870,7 +872,7 @@ fetch_package() {
 		_uri="${PACKAGESITE}${_pkg}"
 	else
 		_uri_path="/$(${PKG_CONFIG} abi)/latest/All/"
-		_uri="${PACKAGEROOT}${uri_path}${pkg}"
+		_uri="${PACKAGEROOT}${_uri_path}${_pkg}"
 	fi
 
 	do_fetch "${_uri}" "${PKGREPOSITORY}/${_pkg}" || return 1
