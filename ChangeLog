@@ -1,3 +1,7 @@
+20200717
+*Fix bug checking FLAVORS
+*Fix underscore missing
+
 20200623
 *If pkg_binary is set, do not run make_config and make_config_conditional
 *Cleanup code
