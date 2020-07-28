@@ -16,6 +16,7 @@
 .Op Fl \-cleanup
 .Op Fl \-config
 .Op Fl \-debug
+.Op Fl \-exclude Ar pkgname
 .Op Fl \-force-config
 .Op Fl \-noclean
 .Op Fl \-nocleanup
@@ -191,7 +192,7 @@ Do not
 .Dq Li make clean
 after each installation.
 .Pp
-.It Fl x Ar GLOB
+.It Fl x , Fl \-exclude Ar GLOB
 Do not replace packages matching the specified glob pattern.
 .Pp
 .El

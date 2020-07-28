@@ -28,8 +28,8 @@ usage() {
 	cat <<-EOF
 	usage: ${0##*/} [-habBcCfFiJknNOpPPrRuvVwW] [--automatic] [--batch]
 	                [--clean] [--cleanup] [--config] [--debug]
-	                [--force-config] [--noclean] [--nocleanup]
-	                [--noconfig] [--version]
+	                [--exclude pkename] [--force-config]
+	                [--noclean] [--nocleanup] [--noconfig] [--version]
 	                [-j jobs] [-l file] [-L prefix] [-m make_args]
 	                [-M make_env] [-x pkgname]
 	                [[pkgname[=package]] [package] [pkgorigin] ...]
@@ -188,6 +188,7 @@ parse_options() {
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
 		debug)		set -x ;;
+		exclude)	opt_exclude=1;;
 		force-config)	opt_force_config=1 ;;
 		noclean)	opt_beforeclean=0 ;;
 		nocleanup)	opt_afterclean=0 ;;
