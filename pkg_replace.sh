@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200718
+PKG_REPLACE_VERSION=20200728
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1472,7 +1472,7 @@ do_version() {
 }
 
 main() {
-	local _ARG _ARGV _jobs _cnt _X
+	local _ARG _ARGV _jobs _pids _cnt _X
 
 	init_variables
 	init_options
@@ -1525,13 +1525,16 @@ main() {
 
 	if istrue ${opt_version}; then
 		_jobs=0
+		_pids=
 		for _ARG in ${upgrade_pkgs}; do
-			if [ ${_jobs} -ge ${opt_maxjobs} ]; then
-				wait
-				_jobs=0
-			fi
+			while [ ${_jobs} -ge ${opt_maxjobs} ]; do
+				_jobs=$(($(ps -p ${_pids} 2>/dev/null | wc -l)-1))
+				[ ${_jobs} -lt 0 ] && _jobs=0
+			done
 			( do_version "${_ARG}" ) &
-			_jobs=$((_jobs+1))
+			_pids="${_pids} $!"
+			_jobs=$(($(ps -p ${_pids} 2>/dev/null | wc -l)-1))
+			[ ${_jobs} -lt 0 ] && _jobs=0
 		done
 		wait
 		tput cd
