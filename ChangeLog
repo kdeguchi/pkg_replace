@@ -1,3 +1,7 @@
+20200803
+*Add --exclude option
+*Speed up packages version checking
+
 20200717
 *Fix bug checking FLAVORS
 *Fix underscore missing
