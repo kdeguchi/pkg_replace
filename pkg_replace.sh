@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200803
+PKG_REPLACE_VERSION=20200821
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -788,7 +788,7 @@ install_package() {
 	info "Installing '$1'"
 
 	istrue ${opt_force} && _install_args="-DFORCE_PKG_REGISTER"
-	istrue ${opt_batch} && install_args="${install_args} -DBATCH"
+	istrue ${opt_batch} && _install_args="${_install_args} -DBATCH"
 
 	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${_install_args} reinstall || return 1
