@@ -120,7 +120,7 @@ init_variables() {
 	: ${PKGREPOSITORY="$(${PKG_CONFIG} PKG_CACHEDIR)/All"}
 	: ${PACKAGEROOT="https://pkg.FreeBSD.org"}
 	: ${PKG_DBDIR="$(${PKG_CONFIG} PKG_DBDIR)"}
-	[ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && _PKG_SUFX=".txz" || _PKG_SUFX=".pkg"
+	: ${_PKG_SUFX="$([ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && echo ".txz" || echo ".pkg")"}
 	: ${PKG_FETCH="$(cd ${PORTSDIR} && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
