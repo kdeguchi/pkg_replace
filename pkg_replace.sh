@@ -120,12 +120,12 @@ init_variables() {
 	: ${PKGREPOSITORY="$(${PKG_CONFIG} PKG_CACHEDIR)/All"}
 	: ${PACKAGEROOT="https://pkg.FreeBSD.org"}
 	: ${PKG_DBDIR="$(${PKG_CONFIG} PKG_DBDIR)"}
-	[ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && PKG_SUFX=".txz"
+	[ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && _PKG_SUFX=".txz" || _PKG_SUFX=".pkg"
 	: ${PKG_FETCH="$(cd ${PORTSDIR} && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
-	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR PKG_SUFX PKGCOMPATDIR
+	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR _PKG_SUFX PKGCOMPATDIR
 	tmpdir=
 	set_signal_int=
 	set_signal_exit=
@@ -859,7 +859,7 @@ do_fetch() {
 fetch_package() {
 	local _pkg _uri _uri_path
 
-	_pkg=$1${PKG_SUFX}
+	_pkg=$1${_PKG_SUFX}
 	if [ -e "${PKGREPOSITORY}/${_pkg}" ]; then
 		return 0
 	elif ! create_dir "${PKGREPOSITORY}" || [ ! -w "${PKGREPOSITORY}" ]; then
@@ -882,7 +882,7 @@ fetch_package() {
 find_package() {
 	local _X
 
-	_X="${PKGREPOSITORY}/$2${PKG_SUFX}"
+	_X="${PKGREPOSITORY}/$2${_PKG_SUFX}"
 
 	if [ -e "${_X}" ]; then
 		info "Found a package of '$2': ${_X}"
@@ -1393,7 +1393,7 @@ do_replace() {
 	_pkg_tmpdir="${tmpdir}/${_cur_pkgname}"
 
 	find_package '_old_pkg' "${_cur_pkgname}" ||
-		_old_pkg="${_pkg_tmpdir}/${_cur_pkgname}${PKG_SUFX}"
+		_old_pkg="${_pkg_tmpdir}/${_cur_pkgname}${_PKG_SUFX}"
 
 	if ! {
 		create_dir "${_pkg_tmpdir}" &&
@@ -1592,7 +1592,6 @@ main() {
 		done
 
 		# upgrade
-
 		set -- ${upgrade_pkgs}
 		_cnt=0
 		do_upgrade=1
