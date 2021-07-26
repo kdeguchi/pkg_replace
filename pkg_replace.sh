@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20200821
+PKG_REPLACE_VERSION=20210726
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -120,7 +120,7 @@ init_variables() {
 	: ${PKGREPOSITORY="$(${PKG_CONFIG} PKG_CACHEDIR)/All"}
 	: ${PACKAGEROOT="https://pkg.FreeBSD.org"}
 	: ${PKG_DBDIR="$(${PKG_CONFIG} PKG_DBDIR)"}
-	: ${PKG_SUFX=".txz"}
+	[ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && PKG_SUFX=".txz"
 	: ${PKG_FETCH="$(cd ${PORTSDIR} && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
@@ -153,15 +153,16 @@ init_variables() {
 }
 
 init_pkgtools() {
-	PKG_ADD="pkg add"
-	PKG_ANNOTATE="pkg annotate"
-	PKG_CHECK="pkg check"
-	PKG_CONFIG="pkg config"
-	PKG_CREATE="pkg create"
-	PKG_DELETE="pkg delete"
-	PKG_INFO="pkg info"
-	PKG_QUERY="pkg query"
-	PKG_SET="pkg set"
+	PKG_BIN="pkg"
+	PKG_ADD="${PKG_BIN} add"
+	PKG_ANNOTATE="${PKG_BIN} annotate"
+	PKG_CHECK="${PKG_BIN} check"
+	PKG_CONFIG="${PKG_BIN} config"
+	PKG_CREATE="${PKG_BIN} create"
+	PKG_DELETE="${PKG_BIN} delete"
+	PKG_INFO="${PKG_BIN} info"
+	PKG_QUERY="${PKG_BIN} query"
+	PKG_SET="${PKG_BIN} set"
 }
 
 parse_options() {

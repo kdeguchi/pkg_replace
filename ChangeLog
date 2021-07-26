@@ -1,3 +1,6 @@
+20210726
+*Support new package suffix .pkg
+
 20200821
 *Fix bug in function install_package: install_args -> _install_args
 
