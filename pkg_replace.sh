@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20210726
+PKG_REPLACE_VERSION=20220303
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -954,14 +954,14 @@ preserve_libs() {
 
 clean_libs() {
 	local _del_files _dest _X
-	if ! istrue ${opt_preserve_libs} || isempty ${preserved_files}; then
+	if istrue ${opt_preserve_libs} || isempty ${preserved_files}; then
 		return 0
 	fi
 	info "Cleaning the preserved shared libraries"
 	_del_files=
 	for _X in ${preserved_files}; do
 		_dest="${PKGCOMPATDIR}/${_X##*/}"
-		if [ -e "${_X}" ]; then
+		if [ -e "${_dest}" ]; then
 			_del_files="${_del_files} ${_dest}"
 		else
 			info "Keeping ${_X} as ${_dest}"
