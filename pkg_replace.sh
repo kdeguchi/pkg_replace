@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20220303
+PKG_REPLACE_VERSION=20220304
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1123,7 +1123,7 @@ set_pkginfo_replace() {
 		"${_X%%=*}")
 			_X=${_X#*=}
 			case ${_X} in
-			*.t[bgx]z)	pkg_binary=${_X} ;;
+			*.${_PKG_SUFX})	pkg_binary=${_X} ;;
 			*/*@*)
 				pkg_origin="${_X%@*}"
 				if [ -d "${pkg_origin}" ]; then
