@@ -1091,8 +1091,8 @@ set_signal_handlers() {
 
 
 set_pkginfo_install() {
-	case $1 in
-	*.${_PKG_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
+	case "$1" in
+	*${_PKG_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
 	*/*@*)
 		pkg_origin="${1%@*}"
 		if [ -d "${pkg_origin}" ]; then
@@ -1122,8 +1122,8 @@ set_pkginfo_replace() {
 		case ${pkg_name} in
 		"${_X%%=*}")
 			_X=${_X#*=}
-			case ${_X} in
-			*.${_PKG_SUFX})	pkg_binary=${_X} ;;
+			case "${_X}" in
+			*${_PKG_SUFX})	pkg_binary=${_X} ;;
 			*/*@*)
 				pkg_origin="${_X%@*}"
 				if [ -d "${pkg_origin}" ]; then
