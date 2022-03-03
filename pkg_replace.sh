@@ -1092,7 +1092,7 @@ set_signal_handlers() {
 
 set_pkginfo_install() {
 	case $1 in
-	*.t[bgx]z)	set_binary_pkginfo "$1" || return 1 ;;
+	*.${_PKG_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
 	*/*@*)
 		pkg_origin="${1%@*}"
 		if [ -d "${pkg_origin}" ]; then
