@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221008
+PKG_REPLACE_VERSION=20221011
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -120,12 +120,12 @@ init_variables() {
 	: ${PKGREPOSITORY="$(${PKG_CONFIG} PKG_CACHEDIR)/All"}
 	: ${PACKAGEROOT="https://pkg.FreeBSD.org"}
 	: ${PKG_DBDIR="$(${PKG_CONFIG} PKG_DBDIR)"}
-	: ${_PKG_SUFX="$([ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && echo ".txz" || echo ".pkg")"}
+	: ${PKG_SUFX="$([ "$(${PKG_BIN} version -t $(${PKG_BIN} -v) 1.17.0)" = "<" ] && echo ".txz" || echo ".pkg")"}
 	: ${PKG_FETCH="$(cd ${PORTSDIR} && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
-	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR _PKG_SUFX PKGCOMPATDIR
+	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR PKG_SUFX PKGCOMPATDIR
 	tmpdir=
 	set_signal_int=
 	set_signal_exit=
@@ -866,7 +866,7 @@ do_fetch() {
 fetch_package() {
 	local _pkg _uri _uri_path
 
-	_pkg=$1${_PKG_SUFX}
+	_pkg=$1${PKG_SUFX}
 	if [ -e "${PKGREPOSITORY}/${_pkg}" ]; then
 		return 0
 	elif ! create_dir "${PKGREPOSITORY}" || [ ! -w "${PKGREPOSITORY}" ]; then
@@ -889,7 +889,7 @@ fetch_package() {
 find_package() {
 	local _X
 
-	_X="${PKGREPOSITORY}/$2${_PKG_SUFX}"
+	_X="${PKGREPOSITORY}/$2${PKG_SUFX}"
 
 	if [ -e "${_X}" ]; then
 		info "Found a package of '$2': ${_X}"
@@ -1099,7 +1099,7 @@ set_signal_handlers() {
 
 set_pkginfo_install() {
 	case "$1" in
-	*${_PKG_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
+	*${PKG_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
 	*/*@*)
 		pkg_origin="${1%@*}"
 		if [ -d "${pkg_origin}" ]; then
@@ -1130,7 +1130,7 @@ set_pkginfo_replace() {
 		"${_X%%=*}")
 			_X=${_X#*=}
 			case "${_X}" in
-			*${_PKG_SUFX})	pkg_binary=${_X} ;;
+			*${PKG_SUFX})	pkg_binary=${_X} ;;
 			*/*@*)
 				pkg_origin="${_X%@*}"
 				if [ -d "${pkg_origin}" ]; then
@@ -1400,7 +1400,7 @@ do_replace() {
 	_pkg_tmpdir="${tmpdir}/${_cur_pkgname}"
 
 	find_package '_old_pkg' "${_cur_pkgname}" ||
-		_old_pkg="${_pkg_tmpdir}/${_cur_pkgname}${_PKG_SUFX}"
+		_old_pkg="${_pkg_tmpdir}/${_cur_pkgname}${PKG_SUFX}"
 
 	if ! {
 		create_dir "${_pkg_tmpdir}" &&
