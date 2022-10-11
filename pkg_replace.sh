@@ -257,7 +257,7 @@ parse_args() {
 		_ARG=${_ARG%/}
 
 		case ${_ARG} in
-		*.pkg|*.t[bgx]z)
+		*${PKG_SUFX})
 			if [ -e "${_ARG}" ] && get_binary_pkgname '_pkg' "${_ARG}"; then
 				if get_installed_pkgname '__pkg' ${_pkg}; then
 					install_pkgs="${install_pkgs} ${_ARG}"
