@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20220304
+PKG_REPLACE_VERSION=20221008
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -257,10 +257,17 @@ parse_args() {
 		_ARG=${_ARG%/}
 
 		case ${_ARG} in
-		*.t[bgx]z)
-			[ -e "${_ARG}" ] && _pkg="${_ARG}"
-			get_binary_pkgname '_pkg' "${_pkg}" || continue
-			install_pkgs="${install_pkgs} ${_pkg}" ;;
+		*.pkg|*.t[bgx]z)
+			if [ -e "${_ARG}" ] && get_binary_pkgname '_pkg' "${_ARG}"; then
+				if get_installed_pkgname '__pkg' ${_pkg}; then
+					install_pkgs="${install_pkgs} ${_ARG}"
+					continue
+				fi
+			else
+				warn "No such file or package: ${_ARG}"
+				continue
+			fi
+			;;
 		*@*/*)	;;
 		*/*@*)
 			pkg_flavor=${_ARG##*@}
@@ -503,14 +510,14 @@ load_env_vars() {
 
 get_installed_pkgname() {
 	local __pkgname
-	__pkgname=$( ${PKG_QUERY} -g '%n-%v' $2 2> /dev/null || echo -n '' )
+	__pkgname=$( ${PKG_QUERY} -g '%n-%v' "$2" 2> /dev/null || echo -n '' )
 	isempty ${__pkgname} && return 1
 	eval $1=\${__pkgname}
 }
 
 get_origin_from_pkgname() {
 	local __origin
-	__origin=$(${PKG_QUERY} '%o' $2)
+	__origin=$(${PKG_QUERY} '%o' "$2")
 	isempty ${__origin} && return 1
 	eval $1=\${__origin}
 }
@@ -542,26 +549,26 @@ get_portdir_from_origin() {
 
 get_pkgname_from_origin() {
 	local __pkgname
-	__pkgname=$(${PKG_QUERY} '%n-%v' $2)
+	__pkgname=$(${PKG_QUERY} '%n-%v' "$2")
 	isempty ${__pkgname} && return 1
 	eval $1=\${__pkgname}
 }
 
 get_depend_pkgnames() {
 	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%dn-%dv' $2 | sort -u)
+	__pkgnames=$(${PKG_QUERY} '%dn-%dv' "$2" | sort -u)
 	eval $1=\${__pkgnames}
 }
 
 get_require_pkgnames() {
 	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%rn-%rv' $2 | sort -u)
+	__pkgnames=$(${PKG_QUERY} '%rn-%rv' "$2" | sort -u)
 	eval $1=\${__pkgnames}
 }
 
 get_binary_pkgname() {
 	local __binary_pkgname
-	__binary_pkgname=$(${PKG_QUERY} -F $2 '%n-%v')
+	__binary_pkgname=$(${PKG_QUERY} -F "$2" '%n-%v')
 	if isempty ${__binary_pkgname}; then
 		warn "'$2' is not a valid package."
 		return 1
@@ -571,21 +578,21 @@ get_binary_pkgname() {
 
 get_binary_origin() {
 	local __binary_origin
-	__binary_origin=$(${PKG_QUERY} -F $2 '%o')
+	__binary_origin=$(${PKG_QUERY} -F "$2" '%o')
 	isempty ${__binary_origin} && return 1
 	eval $1=\${__binary_origin}
 }
 
 get_binary_flavor(){
 	local __binary_flavor
-	__binary_flavor=$(${PKG_QUERY} -F $2 '%At %Av' | grep flavor | cut -d' ' -f 2)
+	__binary_flavor=$(${PKG_QUERY} -F "$2" '%At %Av' | grep flavor | cut -d' ' -f 2)
 	eval $1=\${__binary_flavor}
 }
 
 get_depend_binary_pkgnames() {
 	local _origins _origin _portdir _pkgname
 	_origins=
-	for _origin in $(${PKG_QUERY} -F $2 '%do'); do
+	for _origin in $(${PKG_QUERY} -F "$2" '%do'); do
 		isempty "${_origin}" && continue
 		get_portdir_from_origin '_portdir' ${_origin}
 		get_pkgname_from_portdir '_pkgname' ${_portdir}
@@ -893,7 +900,7 @@ find_package() {
 }
 
 create_package() {
-	try ${PKG_CREATE} -o ${2%/*} $1 || return 1
+	try ${PKG_CREATE} -o ${2%/*} "$1" || return 1
 }
 
 backup_package() {
@@ -1116,7 +1123,7 @@ set_pkginfo_replace() {
 	get_portdir_from_origin 'pkg_portdir' ${pkg_origin}
 
 	isempty ${pkg_flavor} &&
-		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show $1 flavor )
+		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor )
 
 	for _X in ${replace_pkgs}; do
 		case ${pkg_name} in
