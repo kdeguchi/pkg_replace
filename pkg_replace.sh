@@ -258,15 +258,10 @@ parse_args() {
 
 		case ${_ARG} in
 		*${PKG_BINARY_SUFX})
-			if [ -e "${_ARG}" ] && get_binary_pkgname '_pkg' "${_ARG}"; then
-				if get_installed_pkgname '__pkg' ${_pkg}; then
-					install_pkgs="${install_pkgs} ${_ARG}"
-					continue
-				fi
-			else
-				warn "No such file or package: ${_ARG}"
-				continue
-			fi
+			[ ! -e "${_ARG}" ] && warn "'${_ARG}' does not exist." && continue
+			get_binary_pkgname '_pkg' "${_ARG}" || continue
+			get_installed_pkgname '__pkg' ${_pkg} && \
+				install_pkgs="${install_pkgs} ${_ARG}" && continue
 			;;
 		*@*/*)	;;
 		*/*@*)
@@ -1218,7 +1213,7 @@ do_install() {
 		return 0
 	fi
 
-	if isempty ${pkg_flavor} && get_pkgname_from_origin '_cur_pkgname' "${pkg_origin}"; then
+	if ! istrue ${opt_force} && isempty ${pkg_flavor} && get_pkgname_from_origin '_cur_pkgname' "${pkg_origin}"; then
 		info "Skipping '${pkg_origin}' - '${_cur_pkgname}' is already installed"
 		return 0
 	fi
