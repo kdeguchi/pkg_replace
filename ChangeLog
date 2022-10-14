@@ -1,3 +1,15 @@
+20221012
+*Fix PKG_SUFX warning message
+
+20221011
+*Fix bug about PKG_SUFX
+
+20220304
+*Fix bugs for new package suffix
+
+20220303
+*Fix bug clean_libs()
+
 20210726
 *Support new package suffix .pkg
 
