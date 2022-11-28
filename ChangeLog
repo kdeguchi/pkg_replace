@@ -1,3 +1,6 @@
+20221128
+*Fix dependencies checking in get_depend_pkgnames() and get_require_pkgnames()
+
 20221012
 *Fix PKG_SUFX warning message
 

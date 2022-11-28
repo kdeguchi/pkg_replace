@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221012
+PKG_REPLACE_VERSION=20221128
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -551,13 +551,13 @@ get_pkgname_from_origin() {
 
 get_depend_pkgnames() {
 	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%dn-%dv' "$2" | sort -u)
+	__pkgnames=$(${PKG_QUERY} '%dn-%dv' $2 | sort -u)
 	eval $1=\${__pkgnames}
 }
 
 get_require_pkgnames() {
 	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%rn-%rv' "$2" | sort -u)
+	__pkgnames=$(${PKG_QUERY} '%rn-%rv' $2 | sort -u)
 	eval $1=\${__pkgnames}
 }
 
