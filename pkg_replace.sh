@@ -263,23 +263,21 @@ parse_args() {
 				install_pkgs="${install_pkgs} ${ARG}" && continue
 			;;
 		*@*/*)	;;
-		*/*@*)
-			pkg_flavor=${ARG##*@}
-			pkg_origin=${ARG%@*}
-			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
-			[ -e ${pkg_portdir}/Makefile ] || {
-				warn "No such file or package: ${pkg_portdir}"
-				continue
-			}
-			ARG=${pkg_origin} ;;
-		*/*)
-			pkg_flavor=
-			pkg_origin=${ARG#${ARG%/*/${ARG##*/}}/}
-			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
-			[ -e ${pkg_portdir}/Makefile ] || {
-				warn "No such file or package: ${pkg_portdir}"
-				continue
-			}
+		*/*@*|*/*)
+			case ${ARG} in
+			*@*)	pkg_flavor=${ARG##*@}; pkg_portdir=${ARG%@*} ;;
+			*)	pkg_flavor=; pkg_portdir=${ARG} ;;
+			esac
+			if get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null; then
+				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+			else
+				pkg_origin=${pkg_portdir}
+				pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+				[ -e ${pkg_portdir}/Makefile ] || {
+					warn "No such file or package: ${pkg_portdir}"
+					continue
+				}
+			fi
 			ARG=${pkg_origin} ;;
 		*)
 			ARG="${ARG}" ;;
@@ -298,7 +296,7 @@ parse_args() {
 			done
 		elif istrue ${opt_new}; then
 			if isempty ${pkg_flavor}; then
-				install_pkgs="${install_pkgs} ${ARG}"
+				install_pkgs="${install_pkgs} ${pkg_origin}"
 			else
 				install_pkgs="${install_pkgs} ${pkg_origin}@${pkg_flavor}"
 			fi
@@ -1102,7 +1100,7 @@ set_pkginfo_replace() {
 			X=${X#*=}
 			case "${X}" in
 			*${PKG_BINARY_SUFX})	pkg_binary=${X} ;;
-			*/*@*)
+			*/*@*|*/*)
 				pkg_origin="${X%@*}"
 				if [ -d "${pkg_origin}" ]; then
 					pkg_portdir=${pkg_origin}
