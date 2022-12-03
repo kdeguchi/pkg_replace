@@ -26,14 +26,14 @@ PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
 	cat <<-EOF
-	usage: ${0##*/} [-habBcCfFiJknNOpPPrRuvVwW] [--automatic] [--batch]
-	                [--clean] [--cleanup] [--config] [--debug]
-	                [--exclude pkename] [--force-config]
-	                [--noclean] [--nocleanup] [--noconfig] [--version]
-	                [-j jobs] [-l file] [-L prefix] [-m make_args]
-	                [-M make_env] [-x pkgname]
-	                [[pkgname[=package]] [package] [pkgorigin] ...]
-	EOF
+usage: ${0##*/} [-habBcCddfFiJknNOpPPrRRuvVwW] [--automatic]
+                [--batch] [--clean] [--cleanup] [--config]
+                [--debug] [--exclude pkename] [--force-config]
+                [--noclean] [--nocleanup] [--noconfig] [--version]
+                [-j jobs] [-l file] [-L prefix] [-m make_args]
+                [-M make_env] [-x pkgname]
+                [[pkgname[=package]] [package] [pkgorigin] ...]
+EOF
 	exit 1
 }
 
