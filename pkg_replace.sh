@@ -270,7 +270,8 @@ parse_args() {
 			ARG=$(get_pkgname_from_portdir ${pkg_portdir}) || {
 				warn "No such file or package: ${pkg_portdir}"
 				continue
-			} ;;
+			}
+			ARG=${pkg_origin} ;;
 		*/*)
 			pkg_flavor=
 			pkg_origin=${ARG#${ARG%/*/${ARG##*/}}/}
@@ -279,7 +280,7 @@ parse_args() {
 				warn "No such file or package: ${pkg_portdir}"
 				continue
 			}
-			;;
+			ARG=${pkg_origin} ;;
 		*)
 			ARG="${ARG}" ;;
 		esac
@@ -600,8 +601,10 @@ pkg_sort() {
 
 	pkgs=$@
 
+	isempty ${pkgs} && upgrade_pkgs=; return 1
+
 	# check installed package
-	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null || return 1
+	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null
 
 	echo -n 'Checking dependencies'
 	dep_list= ; cnt=0
