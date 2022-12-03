@@ -265,9 +265,9 @@ parse_args() {
 		*@*/*)	;;
 		*/*@*)
 			pkg_flavor=${ARG##*@}
-			pkg_portdir=${ARG%@*}
-			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
-			ARG=$(get_pkgname_from_portdir ${pkg_portdir}) || {
+			pkg_origin=${ARG%@*}
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+			[ -e ${pkg_portdir}/Makefile ] || {
 				warn "No such file or package: ${pkg_portdir}"
 				continue
 			}
@@ -276,7 +276,7 @@ parse_args() {
 			pkg_flavor=
 			pkg_origin=${ARG#${ARG%/*/${ARG##*/}}/}
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
-			ARG=$(get_pkgname_from_portdir ${pkg_portdir}) || {
+			[ -e ${pkg_portdir}/Makefile ] || {
 				warn "No such file or package: ${pkg_portdir}"
 				continue
 			}
