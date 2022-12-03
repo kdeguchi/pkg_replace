@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221128
+PKG_REPLACE_VERSION=20221203
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -206,15 +206,15 @@ parse_options() {
 		B)	opt_backup=0 ;;
 		c)	opt_config=1 ;;
 		C)	opt_force_config=1 ;;
-		d)	opt_depends=1 ;;
+		d)	opt_depends=$((opt_depends+1)) ;;
 		f)	opt_force=1 ;;
 		F)	opt_fetch=1 ;;
 		i)	opt_interactive=1 ;;
 		J)	opt_build=1 ;;
 		j)	opt_maxjobs=$( [ ${OPTARG} -ge 1 ] 2> /dev/null && echo ${OPTARG} || sysctl -n hw.ncpu ) ;;
 		k)	opt_keep_going=1 ;;
-		l)	expand_path 'opt_result' "${OPTARG}" ;;
-		L)	expand_path 'opt_log_prefix' "${OPTARG}" ;;
+		l)	opt_result=$(expand_path ${OPTARG}) ;;
+		L)	opt_log_prefix=$(expand_path ${OPTARG}) ;;
 		m)	opt_make_args="${opt_make_args} ${OPTARG}" ;;
 		M)	opt_make_env="${opt_make_env} ${OPTARG}" ;;
 		n)	opt_noexecute=1 ;;
@@ -223,7 +223,7 @@ parse_options() {
 		p)	opt_package=1 ;;
 		P)	opt_use_packages=$((opt_use_packages+1)) ;;
 		r)	opt_required_by=1 ;;
-		R)	opt_depends=1 ;;
+		R)	opt_depends=$((opt_depends+1)) ;;
 		u)	opt_preserve_libs=0 ;;
 		v)	opt_verbose=1 ;;
 		V)	opt_version=1 ;;
@@ -244,72 +244,65 @@ parse_options() {
 }
 
 parse_args() {
-	local _ARG _pkg __pkg _portdir _deps _reqs _p
+	local ARG pkg pkgs p
 
-	for _ARG in ${1+"$@"}; do
-		pkg_flavor=; _pkg=; _portdir=; _dpes=; _reqs=
+	for ARG in ${1+"$@"}; do
+		pkg_flavor=; pkg_portdir=; pkg_origin=; pkg=;
 
-		case ${_ARG} in
-		\\*)	_ARG=${_ARG#\\} ;;
-		?*=*)	_pkg=${_ARG#*=}; _ARG=${_ARG%%=*} ;;
+		case ${ARG} in
+		\\*)	ARG=${ARG#\\} ;;
+		?*=*)	pkg=${ARG#*=}; ARG=${ARG%%=*} ;;
 		esac
 
-		_ARG=${_ARG%/}
+		ARG=${ARG%/}
 
-		case ${_ARG} in
+		case ${ARG} in
 		*${PKG_BINARY_SUFX})
-			[ ! -e "${_ARG}" ] && warn "'${_ARG}' does not exist." && continue
-			get_binary_pkgname '_pkg' "${_ARG}" || continue
-			get_installed_pkgname '__pkg' ${_pkg} && \
-				install_pkgs="${install_pkgs} ${_ARG}" && continue
+			[ ! -e "${ARG}" ] && warn "'${ARG}' does not exist." && continue
+			get_installed_pkgname $(get_binary_pkgname "${ARG}") 2>&1 > /dev/null &&
+				install_pkgs="${install_pkgs} ${ARG}" && continue
 			;;
 		*@*/*)	;;
 		*/*@*)
-			pkg_flavor=${_ARG##*@}
-			_origin=${_ARG%@*}
-			for _overlay in ${OVERLAYS} ${PORTSDIR}; do
-				[ -d "${_overlay}/${_origin}" ] &&
-					_portdir="${_overlay}/${_origin}" && break
-				[ -d "${_origin}" ] && cd "${_origin}" &&
-					_portdir=$( pwd ) && _origin=${_portdir#${_overlay}/} && break
-			done
-			if get_pkgname_from_portdir '_ARG' "${_portdir}"; then
-				_ARG="${_ARG}"
-			else
-				warn "No such file or package: ${_portdir}"
+			pkg_flavor=${ARG##*@}
+			pkg_portdir=${ARG%@*}
+			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+			ARG=$(get_pkgname_from_portdir ${pkg_portdir}) || {
+				warn "No such file or package: ${pkg_portdir}"
 				continue
-			fi ;;
+			} ;;
+		*/*)
+			pkg_flavor=
+			pkg_origin=${ARG#${ARG%/*/${ARG##*/}}/}
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+			ARG=$(get_pkgname_from_portdir ${pkg_portdir}) || {
+				warn "No such file or package: ${pkg_portdir}"
+				continue
+			}
+			;;
 		*)
-			for _overlay in ${OVERLAYS} ${PORTSDIR}; do
-				[ -d "${_overlay}/${_ARG}" ] &&
-					_ARG="${_ARG}" && break
-				[ -d "${_ARG}" ] && cd "${_ARG}" &&
-					_portdir=$( pwd ) && _ARG="${_portdir#${_overlay}/}" && break
-			done
-			_ARG="${_ARG}" ;;
+			ARG="${ARG}" ;;
 		esac
 
-		if get_installed_pkgname '__pkg' "${_ARG}"; then
+		if pkgs=$(get_installed_pkgname ${ARG}); then
 			if istrue ${opt_depends}; then
-				get_depend_pkgnames '_deps' "${__pkg}"
-				upgrade_pkgs="${upgrade_pkgs} ${_deps}"
+				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames ${pkgs})"
 			fi
-			upgrade_pkgs="${upgrade_pkgs} ${__pkg}"
+			upgrade_pkgs="${upgrade_pkgs} ${pkgs}"
 			if istrue ${opt_required_by}; then
-				get_require_pkgnames '_reqs' "${__pkg}"
-				upgrade_pkgs="${upgrade_pkgs} ${_reqs}"
+				upgrade_pkgs="${upgrade_pkgs} $(get_require_pkgnames ${pkgs})"
 			fi
-			for _p in ${__pkg}; do
-				replace_pkgs="${replace_pkgs}${_pkg:+ ${_p}=${_pkg}}"
+			for p in ${pkgs}; do
+				replace_pkgs="${replace_pkgs}${pkg:+ ${p}=${pkg}}"
 			done
 		elif istrue ${opt_new}; then
 			if isempty ${pkg_flavor}; then
-				install_pkgs="${install_pkgs} ${_ARG}"
+				install_pkgs="${install_pkgs} ${ARG}"
 			else
-				install_pkgs="${install_pkgs} ${_origin}@${pkg_flavor}"
+				install_pkgs="${install_pkgs} ${pkg_origin}@${pkg_flavor}"
 			fi
 		else
-			warn "No such file or package: ${_ARG}"
+			warn "No such file or package: ${ARG}"
 			continue
 		fi
 
@@ -317,77 +310,77 @@ parse_args() {
 }
 
 parse_config() {
-	local _line _var _val _array _func _X
+	local line var val array func X
 
 	[ -r "$1" ] || return 0
 
-	_line=0
-	_array=
-	_func=
+	line=0
+	array=
+	func=
 
-	while read -r _X; do
-		_line=$((_line+1))
+	while read -r X; do
+		line=$((line+1))
 
-		case ${_X} in
+		case ${X} in
 		''|\#*)	continue ;;
 		esac
 
-		case ${_func:+function}${_array:+array} in
+		case ${func:+function}${array:+array} in
 		function)
-			_func="${_func}
-${_X}"
-			case ${_X} in
+			func="${func}
+${X}"
+			case ${X} in
 			'}'|'};')
-				eval "${_func}"
-				_func= ;;
+				eval "${func}"
+				func= ;;
 			esac ;;
 		array)
-			case ${_X} in
+			case ${X} in
 			*[\'\"]?*[\'\"]*)
-				_var=${_X#*[\'\"]}
-				_var=${_var%%[\'\"]*}
+				var=${X#*[\'\"]}
+				var=${var%%[\'\"]*}
 
-				case ${_X} in
+				case ${X} in
 				*=\>*[\'\"]*[\'\"]*)
-					_val=${_X#*=\>*[\'\"]}
-					_val=${_val%[\'\"]*}
-					eval ${_array}='"${'${_array}':+$'${_array}'
-}${_var}=${_val}"' ;;
+					val=${X#*=\>*[\'\"]}
+					val=${val%[\'\"]*}
+					eval ${array}='"${'${array}':+$'${array}'
+}${var}=${val}"' ;;
 				*)
-					eval ${_array}='"$'${_array}' ${_var}"' ;;
+					eval ${array}='"$'${array}' ${var}"' ;;
 				esac ;;
 			[\)}]|[\)}]\;)
-				_array= ;;
+				array= ;;
 			*)
-				warn "Syntax error at line ${_line}: ${_X}"
+				warn "Syntax error at line ${line}: ${X}"
 				return 1 ;;
 			esac ;;
 		*)
-			case ${_X} in
+			case ${X} in
 			*\(\)|*\(\)*{)
-				_var=${_X%%\(\)*}
-				_var=${_var%${_var##*[! ]}}
-				_func="${_X}" ;;
+				var=${X%%\(\)*}
+				var=${var%${var##*[! ]}}
+				func="${X}" ;;
 			?*=*)
-				_var=${_X%%=*}
-				_val=${_X#*=} ;;
-			*)	_var="syntax-error" ;;
+				var=${X%%=*}
+				val=${X#*=} ;;
+			*)	var="syntax-error" ;;
 			esac
 
-			case ${_var} in
+			case ${var} in
 			*[!0-9A-Za-z_]*|[0-9]*)
-				warn "Syntax error at line ${_line}: ${_X}"
+				warn "Syntax error at line ${line}: ${X}"
 				return 1 ;;
 			esac
 
-			case ${_func:+1} in
+			case ${func:+1} in
 			1)	continue ;;
 			esac
 
-			case ${_val} in
+			case ${val} in
 			*[\({])
-				eval ${_var}=; _array=${_var} ;;
-			*)	eval ${_var}=${_val} ;;
+				eval ${var}=; array=${var} ;;
+			*)	eval ${var}=${val} ;;
 			esac ;;
 		esac
 	done < "$1"
@@ -402,11 +395,10 @@ config_match() {
 }
 
 has_config() {
-	local _config _X
-
-	eval _config=\$$1
-	for _X in ${_config}; do
-		if config_match "${_X%%=*}"; then
+	local config X
+	eval config=\$$1
+	for X in ${config}; do
+		if config_match "${X%%=*}"; then
 			return 0
 		fi
 	done
@@ -414,38 +406,37 @@ has_config() {
 }
 
 get_config() {
-	local IFS _config _X
+	local IFS config X
 	IFS='
 '
-	eval _config=\$$2
+	eval config=\$$2
 	eval $1=
-	for _X in ${_config}; do
-		if config_match "${_X%%=*}"; then
-			eval $1='"${'$1':+$'$1'${3- }}${_X#*=}"'
+	for X in ${config}; do
+		if config_match "${X%%=*}"; then
+			eval $1='"${'$1':+$'$1'${3- }}${X#*=}"'
 		fi
 	done
 }
 
 run_config_script() {
-	local _command
-
-	get_config '_command' "$1" '; '
-	if ! isempty ${_command}; then
-		info "Executing the $1 command: ${_command}"
-		( set +efu -- "${2:-${pkg_name-}}" "${3:-${pkg_origin-}}"; eval "${_command}" )
+	local command
+	get_config 'command' "$1" '; '
+	if ! isempty ${command}; then
+		info "Executing the $1 command: ${command}"
+		( set +efu -- "${2:-${pkg_name-}}" "${3:-${pkg_origin-}}"; eval "${command}" )
 	fi
 }
 
 run_rc_script() {
-	local _files _X
-	_files="$(${PKG_QUERY} '%Fp' $1)"
-	for _X in ${_files}; do
-		case ${_X} in
+	local files file
+	files="$(${PKG_QUERY} '%Fp' $1)"
+	for file in ${files}; do
+		case ${file} in
 		*.sample) ;;
 		*/etc/rc.d/*)
-			if [ -x "${_X}" ]; then
-				info "Executing '${_X} $2'"
-				try "${_X}" "$2"
+			if [ -x "${file}" ]; then
+				info "Executing '${file} $2'"
+				try "${file}" "$2"
 			fi ;;
 		esac
 	done
@@ -466,7 +457,6 @@ cmd_restart_rc() {
 load_config() {
 	if ! isempty ${1-} && ! istrue ${opt_noconf}; then
 		istrue ${opt_verbose} && info "Loading $1"
-
 		parse_config "$1" || {
 			warn "Fatal error in $1."
 			exit 1
@@ -504,161 +494,150 @@ load_env_vars() {
 }
 
 get_installed_pkgname() {
-	local __pkgname
-	__pkgname=$( ${PKG_QUERY} -g '%n-%v' "$2" 2> /dev/null || echo -n '' )
-	isempty ${__pkgname} && return 1
-	eval $1=\${__pkgname}
+	${PKG_QUERY} -g '%n-%v' $1 2> /dev/null || return 1
+	return 0
 }
 
 get_origin_from_pkgname() {
-	local __origin
-	__origin=$(${PKG_QUERY} '%o' "$2")
-	isempty ${__origin} && return 1
-	eval $1=\${__origin}
+	${PKG_QUERY} '%o' $1 || return 1
+	return 0
 }
 
 get_pkgname_from_portdir() {
-	local __pkgname __flavor 
-	[ ! -d "$2" ] && return 1
+	[ ! -d "$1" ] && return 1
 	load_make_vars
-#	! isempty ${pkg_flavor} && {
-#		case X"$(cd "$2" && ${PKG_MAKE} -VFLAVORS)" in
-#		*${pkg_flavor}*)	;;
-#		X)	;;
-#		*)	warn "FLAVOR=${pkg_flavor} is not exist!"; exit 1 ;;
-#		esac
-#	}
-	__pkgname=$(cd "$2" && ${PKG_MAKE} -VPKGNAME)
-	isempty ${__pkgname} && return 1
-	eval $1=\${__pkgname}
+	cd $1 && ${PKG_MAKE} -VPKGNAME || return 1
+	return 0
+}
+
+get_overlay_dir() {
+	local overlay
+	for overlay in ${OVERLAYS} ${PORTSDIR}; do
+		[ -e "${overlay}/$1/Makefile" ] && echo ${overlay} && return 0
+	done
+	return 1
 }
 
 get_portdir_from_origin() {
-	local __portdir __overlay
-	__portdir=
-	for __overlay in ${OVERLAYS} ${PORTSDIR}; do
-		[ -e "${__overlay}/$2/Makefile" ] && __portdir="${__overlay}/$2" && break
-	done
-	eval $1=\${__portdir}
+	echo $(get_overlay_dir $1)/$1 || return 1
+	return 0
 }
 
 get_pkgname_from_origin() {
-	local __pkgname
-	__pkgname=$(${PKG_QUERY} '%n-%v' "$2")
-	isempty ${__pkgname} && return 1
-	eval $1=\${__pkgname}
+	${PKG_QUERY} '%n-%v' $1 || return 1
+	return 0
 }
 
 get_depend_pkgnames() {
-	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%dn-%dv' $2 | sort -u)
-	eval $1=\${__pkgnames}
+	local deps pkg origins
+	deps="$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)"
+	[ ${opt_depends} -eq 2 ] && {
+		origins=
+		for pkg in $1; do
+			case " ${deps} " in
+			*\ ${pkg}\ *)	continue;;
+			esac
+			load_make_vars
+			origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS | tr ' ' '\n' | cut -d: -f2)
+		done
+		isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
+	}
+	echo ${deps} | tr ' ' '\n' | sort -u
+	return 0
 }
 
 get_require_pkgnames() {
-	local __pkgnames
-	__pkgnames=$(${PKG_QUERY} '%rn-%rv' $2 | sort -u)
-	eval $1=\${__pkgnames}
+	${PKG_QUERY} '%rn-%rv' $1 | sort -u || return 1
+	return 0
 }
 
 get_binary_pkgname() {
-	local __binary_pkgname
-	__binary_pkgname=$(${PKG_QUERY} -F "$2" '%n-%v')
-	if isempty ${__binary_pkgname}; then
-		warn "'$2' is not a valid package."
+	${PKG_QUERY} -F $1 '%n-%v' || {
+		warn "'$1' is not a valid package."
 		return 1
-	fi
-	eval $1=\${__binary_pkgname}
+	}
+	return 0
 }
 
 get_binary_origin() {
-	local __binary_origin
-	__binary_origin=$(${PKG_QUERY} -F "$2" '%o')
-	isempty ${__binary_origin} && return 1
-	eval $1=\${__binary_origin}
+	${PKG_QUERY} -F $1 '%o' || return 1
+	return 0
 }
 
 get_binary_flavor(){
-	local __binary_flavor
-	__binary_flavor=$(${PKG_QUERY} -F "$2" '%At %Av' | grep flavor | cut -d' ' -f 2)
-	eval $1=\${__binary_flavor}
+	${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2
+	return 0
 }
 
 get_depend_binary_pkgnames() {
-	local _origins _origin _portdir _pkgname
-	_origins=
-	for _origin in $(${PKG_QUERY} -F "$2" '%do'); do
-		isempty "${_origin}" && continue
-		get_portdir_from_origin '_portdir' ${_origin}
-		get_pkgname_from_portdir '_pkgname' ${_portdir}
-		_origins="${_origins} ${_pkgname}:${_origin}"
+	local origins origin
+	origins=
+	for origin in $(${PKG_QUERY} -F $1 '%do'); do
+		isempty "${origin}" && continue
+		origins="${origins} $(get_pkgname_from_portdir $(get_portdir_from_origin ${origin})):${origin}"
 	done
-	eval $1=\${_origins}
+	echo ${origins}
+	return 0
 }
 
 set_portinfo() {
-	pkg_origin="$1"
-	get_portdir_from_origin 'pkg_portdir' "$1"
-	get_pkgname_from_portdir 'pkg_name' "${pkg_portdir}" || return 1
+	pkg_origin=$1
+	pkg_portdir=$(get_portdir_from_origin $1) || return 1
+	pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) || return 1
 	pkg_binary=
 }
 
 set_binary_pkginfo() {
-	get_binary_pkgname 'pkg_name' "$1" || return 1
-	get_binary_origin 'pkg_origin' "$1"
-	get_binary_flavor 'pkg_flavor' "$1"
-	get_portdir_from_origin 'pkg_portdir' ${pkg_origin}
-	pkg_binary="$1"
+	pkg_name=$(get_binary_pkgname $1) || return 1
+	pkg_origin=$(get_binary_origin $1) || return 1
+	pkg_flavor=$(get_binary_flavor $1)
+	pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
+	pkg_binary=$1
 }
 
 pkg_sort() {
-	local _ret _pkgs _pkg _cnt _dep_list __dep_list
+	local pkgs pkg cnt dep_list sorted_dep_list
 
-	_ret="$1"; shift
-
-	case $# in
-	0|1)	eval ${_ret}=\$@; return 0 ;;
-	esac
-
-	_pkgs=$@
+	pkgs=$@
 
 	# check installed package
-	${PKG_INFO} -e ${_pkgs} 2>&1 > /dev/null || return 1
+	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null || return 1
 
 	echo -n 'Checking dependencies'
-	_dep_list= ; _cnt=0
+	dep_list= ; cnt=0
 	# check dependencies
 	while : ; do
 		echo -n '.'
-		_dep_list=${_dep_list}$(echo ${_pkgs} | tr ' ' '\n' | \
-			sed "s/^/${_cnt}:/")' '
-		get_depend_pkgnames '_pkgs' "${_pkgs}"
-		[ -z "${_pkgs}" ] && echo 'done.' && break
-		_cnt=$((_cnt+1))
+		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
+		pkgs=$(get_depend_pkgnames "${pkgs}")
+		[ -z "${pkgs}" ] && echo 'done.' && break
+		cnt=$((cnt+1))
 	done
-	__dep_list=$(echo ${_dep_list} | tr ' ' '\n' | sort -u | \
-		sort -t: -k 1nr -k 2 | cut -d: -f 2)
+
+	sorted_dep_list=$(echo ${dep_list} | tr ' ' '\n' | sort -u | sort -t: -k 1nr -k 2 | cut -d: -f 2)
 
 	# delete duplicate package
-	_dep_list=
-	for _pkg in ${__dep_list}; do
-		case " ${_dep_list} " in
-		*\ ${_pkg}\ *)	continue ;;
-		*)	_dep_list="${_dep_list}${_pkg} " ;;
+	dep_list=
+	for pkg in ${sorted_dep_list}; do
+		case " ${dep_list} " in
+		*\ ${pkg}\ *)	continue ;;
+		*)	dep_list="${dep_list}${pkg} " ;;
 		esac
 	done
 
 	# only pkgs
-	__dep_list=${_dep_list}
-	_dep_list=
-	for _pkg in ${__dep_list}; do
+	sorted_dep_list=${dep_list}
+	dep_list=
+	for pkg in ${sorted_dep_list}; do
 		case " $@ " in
-		*\ ${_pkg}\ *)	_dep_list="${_dep_list}${_pkg} " ;;
+		*\ ${pkg}\ *)	dep_list="${dep_list}${pkg} " ;;
 		*)	continue ;;
 		esac
 	done
 
-	eval ${_ret}=\${_dep_list}
+	upgrade_pkgs=${dep_list}
+
+	return 0
 }
 
 create_tmpdir() {
@@ -692,9 +671,9 @@ create_dir() {
 }
 
 expand_path() {
-	case "$2" in
-	[!/]*)	eval $1='"${PWD:-`pwd`}/${2#./}"' ;;
-	*)	eval $1=\$2 ;;
+	case "$1" in
+	[!/]*)	echo "${PWD:-`pwd`}/${1#./}" ;;
+	*)	echo $1 ;;
 	esac
 }
 
@@ -716,99 +695,99 @@ xtry() {
 }
 
 build_package() {
-	local _build_args
+	local build_args
 
-	_build_args=
+	build_args=
 
 	if istrue ${opt_fetch}; then
-		_build_args="-DBATCH checksum"
+		build_args="-DBATCH checksum"
 		info "Fetching '$1'"
 	else
-		istrue ${opt_package} && _build_args="DEPENDS_TARGET=install"
-		istrue ${opt_batch} && _build_args="${build_args} -DBATCH"
+		istrue ${opt_package} && build_args="DEPENDS_TARGET=install"
+		istrue ${opt_batch} && build_args="${build_args} -DBATCH"
 		info "Building '$1'${PKG_MAKE_ARGS:+ with make flags: ${PKG_MAKE_ARGS}}"
 	fi
 
-	cd "$1" || return 1
+	cd $1 || return 1
 
 	if ! istrue ${opt_fetch}; then
 		run_config_script 'BEFOREBUILD'
 		if istrue ${opt_beforeclean}; then
-			clean_package "$1" || return 1
+			clean_package $1 || return 1
 		fi
 	fi
 
-	xtry ${PKG_MAKE} ${_build_args} || return 1
+	xtry ${PKG_MAKE} ${build_args} || return 1
 
 	(istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1) || return 0
 
 }
 
 set_automatic_flag() {
-	${PKG_SET} -y -A "$2" "$(${PKG_QUERY} '%n-%v' $1)" 2> /dev/null
+	${PKG_SET} -y -A $2 $(${PKG_QUERY} '%n-%v' $1) 2> /dev/null || return 1
+	return 0
 }
 
 install_pkg_binary_depends() {
-	local _deps _dep_name _dep_origin _installed_pkg _X
+	local dep_name dep_origin installed_pkg X
 
 	info "Installing dependencies for '$1'"
 
-	get_depend_binary_pkgnames '_deps' "$1"
-	for _X in ${_deps}; do
-		_dep_name=${_X%:*}
-		_dep_origin=${_X##*:}
+	for X in $(get_depend_binary_pkgnames $1); do
+		dep_name=${X%:*}
+		dep_origin=${X##*:}
 		if {
-			get_installed_pkgname '_installed_pkg' "${_dep_name%-*}" ||
-			get_pkgname_from_origin '_installed_pkg' "${_dep_origin}"
+			installed_pkg=$(get_installed_pkgname ${dep_name%-*}) ||
+			installed_pkg=$(get_pkgname_from_origin ${dep_origin})
 		}; then
-			info " Required installed package: ${_dep_name} - installed"
+			info " Required installed package: ${dep_name} - installed"
 		else
-			info " Required installed package: ${_dep_name} - not installed"
-			( opt_build=0; do_install "${_dep_origin}" && [ "${result}" = "done" ] ) ||
+			info " Required installed package: ${dep_name} - not installed"
+			( opt_build=0; do_install "${dep_origin}" && [ "${result}" = "done" ] ) ||
 			{
-				warn "Failed to install '${_dep_origin}'"
+				warn "Failed to install '${dep_origin}'"
 				return 1
 			}
-			set_automatic_flag "${_dep_origin}" '1' || return 1
+			set_automatic_flag ${dep_origin} '1' || return 1
 			info "Returning to install of '$1'"
 		fi
 	done
 }
 
 install_pkg_binary() {
-	local _install_args
-	_install_args=
+	local install_args
+	install_args=
 	info "Installing '$1'"
-	istrue ${opt_force} && _install_args="-f"
-	xtry ${PKG_ADD} ${_install_args} $1 || return 1
+	istrue ${opt_force} && install_args="-f"
+	xtry ${PKG_ADD} ${install_args} $1 || return 1
 	run_config_script 'AFTERINSTALL'
 }
 
 install_package() {
-	local _install_args
-	_install_args=
+	local install_args
+	install_args=
 
 	info "Installing '$1'"
 
-	istrue ${opt_force} && _install_args="-DFORCE_PKG_REGISTER"
-	istrue ${opt_batch} && _install_args="${_install_args} -DBATCH"
+	istrue ${opt_force} && install_args="-DFORCE_PKG_REGISTER"
+	istrue ${opt_batch} && install_args="${_install_args} -DBATCH"
 
-	cd "$1" || return 1
-	xtry ${PKG_MAKE} ${_install_args} reinstall || return 1
+	cd $1 || return 1
+	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
 	if istrue ${opt_afterclean}; then
-		clean_package "$1"
+		clean_package $1
 	fi
 
 	run_config_script 'AFTERINSTALL'
 }
 
 deinstall_package() {
-	local _deinstall_args
-	_deinstall_args=
+	local deinstall_args
+	deinstall_args=
 
-	istrue ${do_upgrade} || istrue ${opt_force} && _deinstall_args="-f"
-	_deinstall_args="${_deinstall_args} -y" || \
-		(istrue ${opt_verbose} && _deinstall_args="${_deinstall_args} -v")
+	istrue ${do_upgrade} || istrue ${opt_force} && deinstall_args="-f"
+	deinstall_args="${deinstall_args} -y" || \
+		(istrue ${opt_verbose} && deinstall_args="${deinstall_args} -v")
 
 	info "Deinstalling '$1'"
 
@@ -819,52 +798,52 @@ deinstall_package() {
 
 	run_config_script 'BEFOREDEINSTALL' "$1"
 
-	try ${PKG_DELETE} ${_deinstall_args} $1 || return 1
+	try ${PKG_DELETE} ${deinstall_args} $1 || return 1
 }
 
 clean_package() {
-	local _clean_args
-	_clean_args=
+	local clean_args
+	clean_args=
 
 	info "Cleaning '$1'"
 
-	cd "$1" || return 1
+	cd $1 || return 1
 
-	try ${PKG_MAKE} ${_clean_args} clean || return 1
+	try ${PKG_MAKE} ${clean_args} clean || return 1
 }
 
 do_fetch() {
-	local _fetch_cmd _fetch_args _fetch_path
+	local fetch_cmd fetch_args fetch_path
 
-	_fetch_path=${2:-${1##*/}}
-	_fetch_cmd=${PKG_FETCH%%[$IFS]*}
-	_fetch_args=${PKG_FETCH#${_fetch_cmd}}
+	fetch_path=${2:-${1##*/}}
+	fetch_cmd=${PKG_FETCH%%[$IFS]*}
+	fetch_args=${PKG_FETCH#${fetch_cmd}}
 
-	case ${_fetch_cmd##*/} in
-	curl|fetch|ftp|axel)	_fetch_args="${_fetch_args} -o ${_fetch_path}" ;;
-	wget)	_fetch_args="${_fetch_args} -O ${_fetch_path}" ;;
+	case ${fetch_cmd##*/} in
+	curl|fetch|ftp|axel)	fetch_args="${fetch_args} -o ${fetch_path}" ;;
+	wget)	fetch_args="${fetch_args} -O ${fetch_path}" ;;
 	esac
 
-	case ${_fetch_path} in
-	*/*)	cd "${_fetch_path%/*}/" || return 1 ;;
+	case ${fetch_path} in
+	*/*)	cd ${fetch_path%/*}/ || return 1 ;;
 	esac
 
-	try "${_fetch_cmd}" ${_fetch_args} "$1"
+	try ${fetch_cmd} ${fetch_args} $1
 
-	if [ ! -s "${_fetch_path}" ]; then
+	if [ ! -s "${fetch_path}" ]; then
 		warn "Failed to fetch: $1"
-		try rm -f "${_fetch_path}"
+		try rm -f "${fetch_path}"
 		return 1
 	fi
 }
 
 fetch_package() {
-	local _pkg _uri _uri_path
+	local pkg uri uri_path
 
-	_pkg=$1${PKG_BINARY_SUFX}
-	if [ -e "${PKGREPOSITORY}/${_pkg}" ]; then
+	pkg=$1${PKG_BINARY_SUFX}
+	if [ -e "${PKGREPOSITORY}/${pkg}" ]; then
 		return 0
-	elif ! create_dir "${PKGREPOSITORY}" || [ ! -w "${PKGREPOSITORY}" ]; then
+	elif ! create_dir ${PKGREPOSITORY} || [ ! -w "${PKGREPOSITORY}" ]; then
 		warn "You do not own ${PKGREPOSITORY}."
 		return 1
 	fi
@@ -872,36 +851,33 @@ fetch_package() {
 	load_env_vars
 
 	if ! isempty ${PACKAGESITE-}; then
-		_uri="${PACKAGESITE}${_pkg}"
+		uri="${PACKAGESITE}${pkg}"
 	else
-		_uri_path="/$(${PKG_CONFIG} abi)/latest/All/"
-		_uri="${PACKAGEROOT}${_uri_path}${_pkg}"
+		uri_path="/$(${PKG_CONFIG} abi)/latest/All/"
+		uri="${PACKAGEROOT}${uri_path}${pkg}"
 	fi
 
-	do_fetch "${_uri}" "${PKGREPOSITORY}/${_pkg}" || return 1
+	do_fetch "${uri}" "${PKGREPOSITORY}/${pkg}" || return 1
 }
 
 find_package() {
-	local _X
+	local pkgfile
 
-	_X="${PKGREPOSITORY}/$2${PKG_BINARY_SUFX}"
+	pkgfile="${PKGREPOSITORY}/$2${PKG_BINARY_SUFX}"
 
-	if [ -e "${_X}" ]; then
-		info "Found a package of '$2': ${_X}"
-		eval $1=\${_X}
+	if [ -e "${pkgfile}" ]; then
+		info "Found a package of '$1': ${pkgfile}"
+		echo ${pkgfile}
+		return 0
 	else
 		return 1
 	fi
 }
 
-create_package() {
-	try ${PKG_CREATE} -o ${2%/*} "$1" || return 1
-}
-
 backup_package() {
 	if istrue ${opt_backup} && [ ! -e "$2" ]; then
 		info "Backing up the old version"
-		create_package "$1" "$2" || [ -s "$2" ] || return 1
+		try ${PKG_CREATE} -o ${2%/*} $1 || return 1
 	fi
 }
 
@@ -915,7 +891,7 @@ backup_file() {
 restore_package() {
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
-		install_pkg_binary "$1" || return 1
+		install_pkg_binary $1 || return 1
 	else
 		return 1
 	fi
@@ -924,122 +900,121 @@ restore_package() {
 restore_file() {
 	if [ -e "$1" ] && [ ! -e "$2" ]; then
 		info "Restoring the ${1##*/} file"
-		try mv -f "$1" "$2" || return 1
+		try mv -f $1 $2 || return 1
 	fi
 }
 
 process_package() {
 	if istrue ${opt_keep_backup} && [ -e "$1" ] && [ ! -e "${PKG_BACKUP_DIR}/${1##*/}" ]; then
 		info "Keeping the old version in '${PKG_BACKUP_DIR}'"
-		create_dir "${PKG_BACKUP_DIR}" || return 1
-		try mv -f "$1" "${PKG_BACKUP_DIR}" || return 1
+		create_dir ${PKG_BACKUP_DIR} || return 1
+		try mv -f $1 ${PKG_BACKUP_DIR} || return 1
 	fi
 }
 
 preserve_libs() {
-	local _files _X
+	local file
 	istrue ${opt_preserve_libs} || return 0
 	preserved_files=
-	_files="$(${PKG_QUERY} '%Fp' $1)"
-	for _X in ${_files}; do
-		case ${_X##*/} in
+	for file in $(${PKG_QUERY} '%Fp' $1); do
+		case ${file##*/} in
 		*.so.[0-9]*|*.so)
-			[ -f "${_X}" ] && preserved_files="${preserved_files} ${_X}" ;;
+			[ -f "${file}" ] && preserved_files="${preserved_files} ${file}" ;;
 		esac
 	done
 	if ! isempty ${preserved_files}; then
 		info "Preserving the shared libraries"
 		create_dir "${PKGCOMPATDIR}" || return 1
-		try cp -af ${preserved_files} "${PKGCOMPATDIR}" || return 1
+		try cp -af ${preserved_files} ${PKGCOMPATDIR} || return 1
 	fi
 }
 
 clean_libs() {
-	local _del_files _dest _X
+	local del_files dest file
 	if istrue ${opt_preserve_libs} || isempty ${preserved_files}; then
 		return 0
 	fi
 	info "Cleaning the preserved shared libraries"
-	_del_files=
-	for _X in ${preserved_files}; do
-		_dest="${PKGCOMPATDIR}/${_X##*/}"
-		if [ -e "${_dest}" ]; then
-			_del_files="${_del_files} ${_dest}"
+	del_files=
+	for file in ${preserved_files}; do
+		dest=${PKGCOMPATDIR}/${file##*/}
+		if [ -e "${dest}" ]; then
+			del_files="${del_files} ${dest}"
 		else
-			info "Keeping ${_X} as ${_dest}"
+			info "Keeping ${file} as ${dest}"
 		fi
 	done
-	if ! isempty ${_del_files}; then
-		try rm -f ${_del_files} || return 1
+	if ! isempty ${del_files}; then
+		try rm -f ${del_files} || return 1
 	fi
 }
 
 parse_moved() {
-	local IFS _ret _info _origin _new_origin _portdir
-	local _date _why _checked
+	local IFS ret info origin new_origin portdir
+	local date why checked X
 
-	_ret=$1; eval $1=
-	_info=$2; eval $2=
-	_origin=$3; _checked=
+	ret=$1; eval $1=
+	info=$2; eval $2=
+	origin=$3; checked=
 
 	IFS='|'
-	while X=$(grep "^${_origin}|" "${PORTSDIR}/MOVED"); do
+	while X=$(grep "^${origin}|" "${PORTSDIR}/MOVED"); do
 		set -- $X
-		_origin=${1-}; _new_origin=${2-}; _date=${3-}; _why=${4-}
+		origin=${1-}; new_origin=${2-}; date=${3-}; why=${4-}
 
-		case "$#:${_checked}:" in
-		[!4]:*|?:*:${_new_origin}:*)
+		case "$#:${checked}:" in
+		[!4]:*|?:*:${new_origin}:*)
 			warn "MOVED may be broken"
 			return 1
 		esac
 
-		_checked="${_checked}:${_origin}"
-		_origin=${_new_origin}
-		eval ${_info}='"${_why} (${_date})"'
+		checked="${checked}:${origin}"
+		origin=${new_origin}
+		eval ${info}='"${why} (${date})"'
 
-		if isempty ${_new_origin}; then
-			eval ${_ret}=removed
+		if isempty ${new_origin}; then
+			eval ${ret}=removed
 			break
 		fi
 
-		get_portdir_from_origin '_portdir' ${_new_origin}
-		! isempty ${_portdir} && eval ${_ret}=\${_new_origin} && break
+		portdir=$(get_portdir_from_origin ${new_origin})
+		! isempty ${portdir} && eval ${ret}=\${new_origin} && break
 
 	done
 }
 
 trace_moved() {
-	local _moved _reason
+	local moved reason
 
-	parse_moved '_moved' '_reason' "$1" || return 1
+	parse_moved 'moved' 'reason' "$1" || return 1
 
-	case ${_moved} in
+	case ${moved} in
 	'')
 		warn "Path is wrong or has no Makefile:"
 		return 1 ;;
 	removed)
 		warn "'$1' has removed from ports tree:"
-		warn "    ${_reason}"
+		warn "    ${reason}"
 		return 1 ;;
 	*)
-		warn "'$1' has moved to '${_moved}':"
-		warn "    ${_reason}"
-		pkg_origin=${_moved}
-		get_portdir_from_origin 'pkg_portdir' ${_moved}
+		warn "'$1' has moved to '${moved}':"
+		warn "    ${reason}"
+		pkg_origin=${moved}
+		pkg_portdir=$(get_portdir_from_origin ${moved})
 		;;
 	esac
 }
 
 init_result() {
-	local _X
+	local X
 
 	log_file="${tmpdir}/${0##*/}.log"
 	create_file "${log_file}" || return 1
 
-	for _X in ${log_format}; do
-		eval cnt_${_X#*:}=0
-		eval log_sign_${_X#*:}=${_X%%:*}
-		log_summary="${log_summary:+${log_summary}, }\${cnt_${_X#*:}} ${_X#*:}"
+	for X in ${log_format}; do
+		eval cnt_${X#*:}=0
+		eval log_sign_${X#*:}=${X%%:*}
+		log_summary="${log_summary:+${log_summary}, }\${cnt_${X#*:}} ${X#*:}"
 	done
 }
 
@@ -1050,30 +1025,30 @@ set_result() {
 }
 
 show_result() {
-	local _mask _descr _X
+	local mask descr X
 
-	_mask=
-	_descr=
+	mask=
+	descr=
 	istrue ${log_length} || return 0
 
-	for _X in ${log_format}; do
-		case ${_X#*:} in
+	for X in ${log_format}; do
+		case ${X#*:} in
 		failed)
 			istrue ${cnt_failed} || continue ;;
 		skipped)
 			istrue ${cnt_skipped} || continue ;;
 		*)	istrue ${opt_verbose} || continue ;;
 		esac
-		_mask="${_mask}${_X%%:*}"
-		_descr="${_descr:+${_descr} / }${_X}"
+		mask="${mask}${X%%:*}"
+		descr="${descr:+${descr} / }${X}"
 	done
 
-	if ! isempty ${_mask}; then
-		info "Listing the results (${_descr})"
-		while read _X; do
-			case ${_X%% *} in
-			["${_mask}"])
-				echo "        ${_X}" ;;
+	if ! isempty ${mask}; then
+		info "Listing the results (${descr})"
+		while read X; do
+			case ${X%% *} in
+			["${mask}"])
+				echo "        ${X}" ;;
 			esac
 		done < "${log_file}"
 	fi
@@ -1081,7 +1056,7 @@ show_result() {
 
 write_result() {
 	if ! isempty "$1"; then
-		try cp -f "${log_file}" "$1" || return 0
+		try cp -f "${log_file}" $1 || return 0
 	fi
 	try rm -f "${log_file}"
 }
@@ -1100,7 +1075,7 @@ set_pkginfo_install() {
 		if [ -d "${pkg_origin}" ]; then
 			pkg_portdir=${pkg_origin}
 		else
-			get_portdir_from_origin 'pkg_portdir' ${pkg_origin}
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 		fi
 		pkg_flavor="${1##*@}" ;;
 	*)	set_portinfo "$1" || return 1 ;;
@@ -1108,33 +1083,31 @@ set_pkginfo_install() {
 }
 
 set_pkginfo_replace() {
-	local _X
+	local X
 
-	pkg_name="$1"
-	get_origin_from_pkgname 'pkg_origin' "${pkg_name}"
+	pkg_name=$1
+	pkg_origin=$(get_origin_from_pkgname ${pkg_name})
 	pkg_binary=
-	pkg_portdir=
-
-	get_portdir_from_origin 'pkg_portdir' ${pkg_origin}
+	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 
 	isempty ${pkg_flavor} &&
 		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor )
 
-	for _X in ${replace_pkgs}; do
+	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
-		"${_X%%=*}")
-			_X=${_X#*=}
-			case "${_X}" in
-			*${PKG_BINARY_SUFX})	pkg_binary=${_X} ;;
+		"${X%%=*}")
+			X=${X#*=}
+			case "${X}" in
+			*${PKG_BINARY_SUFX})	pkg_binary=${X} ;;
 			*/*@*)
-				pkg_origin="${_X%@*}"
+				pkg_origin="${X%@*}"
 				if [ -d "${pkg_origin}" ]; then
 					pkg_portdir=${pkg_origin}
 				else
-					get_portdir_from_origin 'pkg_portdir' ${pkg_origin}
+					pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 				fi
-				pkg_flavor="${_X##*@}" ;;
-			*)	pkg_portdir="${_X}"; pkg_origin="${pkg_origin}" ;;
+				pkg_flavor="${X##*@}" ;;
+			*)	pkg_origin="${pkg_origin}" ;;
 			esac
 			break ;;
 		esac
@@ -1145,21 +1118,23 @@ set_pkginfo_replace() {
 			err="not installed or no origin recorded"
 			return 1
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
-			trace_moved "${pkg_origin}" || { err="removed"; return 1; }
+			trace_moved ${pkg_origin} || { err="removed"; return 1; }
 		fi
-		get_pkgname_from_portdir 'pkg_name' "${pkg_portdir}" || return 1
+		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) || return 1
 	else
-		get_binary_pkgname 'pkg_name' "${pkg_binary}" || return 1
-		get_binary_flavor 'pkg_flavor' "${pkg_binary}" || return 1
+		pkg_name=$(get_binary_pkgname ${pkg_binary}) || return 1
+		pkg_flavor=$(get_binary_flavor ${pkg_binary}) || return 1
 	fi
 }
 
 make_config_conditional() {
-    (cd "$1" && ${PKG_MAKE} config-conditional) || return 1
+	load_make_vars
+	(cd "$1" && ${PKG_MAKE} config-conditional) || return 1
 }
 
 make_config() {
-    (cd "$1" && ${PKG_MAKE} config) || return 1
+	load_make_vars
+	(cd "$1" && ${PKG_MAKE} config) || return 1
 }
 
 do_install_config() {
@@ -1195,15 +1170,15 @@ do_install_config() {
 
 do_install() {
 	err=; result=
-	local _cur_pkgname _pkg
+	local cur_pkgname pkg
 
 	case "$1" in
-	*/*@*)	pkg_flavor="${1##*@}"; _pkg=${1%@*} ;;
-	*)	_pkg="$1" ;;
+	*/*@*)	pkg_flavor="${1##*@}"; pkg=${1%@*} ;;
+	*)	pkg="$1" ;;
 	esac
 
-	set_pkginfo_install "${_pkg}" || {
-		warn "Skipping '$_pkg'${err:+ - ${err}}."
+	set_pkginfo_install ${pkg} || {
+		warn "Skipping '$pkg'${err:+ - ${err}}."
 		result="skipped"
 		return 0
 	}
@@ -1213,12 +1188,12 @@ do_install() {
 		return 0
 	fi
 
-	if ! istrue ${opt_force} && isempty ${pkg_flavor} && get_pkgname_from_origin '_cur_pkgname' "${pkg_origin}"; then
-		info "Skipping '${pkg_origin}' - '${_cur_pkgname}' is already installed"
+	if ! istrue ${opt_force} && isempty ${pkg_flavor} && cur_pkgname=$(get_pkgname_from_origin ${pkg_origin}); then
+		info "Skipping '${pkg_origin}' - '${cur_pkgname}' is already installed"
 		return 0
 	fi
 
-	info "Installing '${pkg_name}' from '$_pkg'"
+	info "Installing '${pkg_name}' from '${pkg}'"
 
 	if istrue ${opt_noexecute}; then
 		result="done"
@@ -1230,8 +1205,8 @@ do_install() {
 	do_logging=${opt_log_prefix:+"${opt_log_prefix}${pkg_name}.log"}
 
 	if isempty ${pkg_binary} && has_config 'USE_PKGS'; then
-		if fetch_package "${pkg_name}"; then
-			find_package 'pkg_binary' "${pkg_name}" || return 1
+		if fetch_package ${pkg_name}; then
+			pkg_binary=$(find_package ${pkg_name}) || return 1
 		else
 			case ${opt_use_packages} in
 			1)	warn "Using the source instead of the binary package." ;;
@@ -1241,12 +1216,12 @@ do_install() {
 	fi
 
 	if isempty ${pkg_binary}; then
-		build_package "${pkg_portdir}" || {
+		build_package ${pkg_portdir} || {
 			err="build error"
 			return 1
 		}
 	elif ! istrue ${opt_fetch}; then
-		install_pkg_binary_depends "${pkg_binary}" || {
+		install_pkg_binary_depends ${pkg_binary} || {
 			err="dependency error"
 			return 1
 		}
@@ -1259,8 +1234,8 @@ do_install() {
 
 	if {
 		case ${pkg_binary} in
-		'')	install_package "${pkg_portdir}" ;;
-		*)	install_pkg_binary "${pkg_binary}" ;;
+		'')	install_package ${pkg_portdir} ;;
+		*)	install_pkg_binary ${pkg_binary} ;;
 		esac
 	}; then
 		result="done"
@@ -1269,14 +1244,14 @@ do_install() {
 		return 1
 	fi
 
-	set_automatic_flag "${pkg_name}" "${opt_automatic}" || return 1
+	set_automatic_flag ${pkg_name} ${opt_automatic} || return 1
 }
 
 do_replace_config() {
 	err=; result=
-	local _cur_pkgname
+	local cur_pkgname
 
-	_cur_pkgname="$1"
+	cur_pkgname=$1
 	pkg_flavor=
 
 	set_pkginfo_replace "$1" || {
@@ -1286,13 +1261,13 @@ do_replace_config() {
 	}
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		info "Skipping '${_cur_pkgname}' (-> ${pkg_name}) - ignored"
+		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		return 0
 	fi
 
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1"
-		xtry make_config_conditional "${pkg_portdir}" || {
+		xtry make_config_conditional ${pkg_portdir} || {
 			err="config-conditional error"
 			return 1
 		}
@@ -1301,7 +1276,7 @@ do_replace_config() {
 
 	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1"
-		xtry make_config "${pkg_portdir}" || {
+		xtry make_config ${pkg_portdir} || {
 			err="config error"
 			return 1
 		}
@@ -1311,18 +1286,17 @@ do_replace_config() {
 }
 
 do_replace() {
-	local _deps _pkg_tmpdir _old_pkg
-	local _cur_pkgname _cur_origin _origin _automatic_flag
-	local _X
+	local deps pkg_tmpdir old_pkg
+	local cur_pkgname cur_origin origin automatic_flag
+	local X
 
 	err=; result=
 	pkg_flavor=
 
 	if ! isempty "${failed_pkgs}" && ! istrue ${opt_keep_going}; then
-		get_depend_pkgnames '_deps' "$1"
-		for _X in ${_deps}; do
+		for X in $(get_depend_pkgnames $1); do
 			case " ${failed_pkgs} " in
-			*\ ${_X%-*}\ *)
+			*\ ${X%-*}\ *)
 				info "Skipping '$1' because a requisite package '$X' failed"
 				result="skipped"
 				return 0 ;;
@@ -1330,28 +1304,28 @@ do_replace() {
 		done
 	fi
 
-	_cur_pkgname="$1"
+	cur_pkgname=$1
 
-	set_pkginfo_replace "$1" || {
+	set_pkginfo_replace $1 || {
 		warn "Skipping '$1'${err:+ - ${err}}."
 		result="skipped"
 		return 0
 	}
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		info "Skipping '${_cur_pkgname}' (-> ${pkg_name}) - ignored"
+		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		return 0
 	fi
 
 	case ${pkg_name} in
-	"${_cur_pkgname}")
+	"${cur_pkgname}")
 		if istrue ${opt_force}; then
 			info "Reinstalling '${pkg_name}'"
 		else
-			warn "No need to replace '${_cur_pkgname}'. (specify -f to force)"
+			warn "No need to replace '${cur_pkgname}'. (specify -f to force)"
 			return 0
 		fi ;;
-	*)	info "Replacing '${_cur_pkgname}' with '${pkg_name}'" ;;
+	*)	info "Replacing '${cur_pkgname}' with '${pkg_name}'" ;;
 	esac
 
 	if istrue ${opt_noexecute}; then
@@ -1375,7 +1349,7 @@ do_replace() {
 	fi
 
 	if isempty ${pkg_binary}; then
-		load_upgrade_vars "${_cur_pkgname}"
+		load_upgrade_vars "${cur_pkgname}"
 		build_package "${pkg_portdir}" || {
 			err="build error"
 			return 1
@@ -1392,60 +1366,60 @@ do_replace() {
 		return 0
 	fi
 
-	_pkg_tmpdir="${tmpdir}/${_cur_pkgname}"
+	pkg_tmpdir="${tmpdir}/${cur_pkgname}"
 
-	find_package '_old_pkg' "${_cur_pkgname}" ||
-		_old_pkg="${_pkg_tmpdir}/${_cur_pkgname}${PKG_BINARY_SUFX}"
+	old_pkg=$(find_package ${cur_pkgname}) ||
+		old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
 	if ! {
-		create_dir "${_pkg_tmpdir}" &&
-		backup_package "${_cur_pkgname}" "${_old_pkg}" &&
-		preserve_libs "${_cur_pkgname}"
-		_automatic_flag=$(${PKG_QUERY} '%a' ${_cur_pkgname})
-		get_origin_from_pkgname '_cur_origin' ${_cur_pkgname}
+		create_dir ${pkg_tmpdir} &&
+		backup_package ${cur_pkgname} ${old_pkg} &&
+		preserve_libs ${cur_pkgname}
+		automatic_flag=$(${PKG_QUERY} '%a' ${cur_pkgname})
+		cur_origin=$(get_origin_from_pkgname ${cur_pkgname})
 	}; then
 		err="backup error"
-		try rm -rf "${_pkg_tmpdir}"
+		try rm -rf "${pkg_tmpdir}"
 		return 1
 	fi
 
-	if deinstall_package "${_cur_pkgname}"; then
+	if deinstall_package "${cur_pkgname}"; then
 		if {
 			case ${pkg_binary} in
 			'')
-				get_pkgname_from_portdir 'pkg_name' "${pkg_portdir}" &&
-					install_package "${pkg_portdir}" ;;
-			*)	install_pkg_binary "${pkg_binary}" ;;
+				pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) &&
+					install_package ${pkg_portdir} ;;
+			*)	install_pkg_binary ${pkg_binary} ;;
 			esac
 		}; then
 			result="done"
-			set_automatic_flag "${pkg_name}" "${_automatic_flag}" || return 1
+			set_automatic_flag ${pkg_name} ${automatic_flag} || return 1
 		else
 			err="install error"
-			restore_package "${_old_pkg}" || {
+			restore_package "${old_pkg}" || {
 				warn "Failed to restore the old version," \
-				"please reinstall '${_old_pkg}' manually."
+				"please reinstall '${old_pkg}' manually."
 				return 1
 			}
-			set_automatic_flag "${_cur_pkgname}" "${_automatic_flag}" || return 1
+			set_automatic_flag ${cur_pkgname} ${automatic_flag} || return 1
 		fi
 	else
 		err="deinstall error"
 	fi
 
-	process_package "${_old_pkg}" ||
+	process_package "${old_pkg}" ||
 		warn "Failed to keep the old version."
 	clean_libs ||
 		warn "Failed to remove the preserved shared libraries."
-	try rm -rf "${_pkg_tmpdir}" ||
+	try rm -rf "${pkg_tmpdir}" ||
 		warn "Couldn't remove the working direcotry."
 
 	case ${result} in
 	done)
-		get_origin_from_pkgname '_origin' ${pkg_name}
-		if [ ${_cur_origin} != ${_origin} ]; then
-			info "Replacing dependencies: '${_cur_origin}' -> '${_origin}'"
-			${PKG_SET} -y -o ${_cur_origin}:${_origin} || return 1
+		origin=$(get_origin_from_pkgname ${pkg_name})
+		if [ ${cur_origin} != ${origin} ]; then
+			info "Replacing dependencies: '${cur_origin}' -> '${origin}'"
+			${PKG_SET} -y -o ${cur_origin}:${origin} || return 1
 		else
 			return 0
 		fi
@@ -1459,7 +1433,7 @@ do_version() {
 
 	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1"
 
-	if set_pkginfo_replace "$1"; then
+	if set_pkginfo_replace $1; then
 		case ${pkg_name} in
 		"$1")	return 0 ;;
 		esac
@@ -1476,7 +1450,7 @@ do_version() {
 }
 
 main() {
-	local _ARG _ARGV _jobs _pids _cnt _X
+	local ARG ARGV jobs pids cnt X
 
 	init_variables
 	init_options
@@ -1498,27 +1472,27 @@ main() {
 	parse_args ${1+"$@"}
 
 	if ! isempty ${opt_exclude}; then
-		_ARGV=
-		for _ARG in ${install_pkgs}; do
-			for _X in ${opt_exclude}; do
-				case "|${_ARG}|${_ARG##*/}|" in
-					*\|${_X}\|*)	continue 2 ;;
+		ARGV=
+		for ARG in ${install_pkgs}; do
+			for X in ${opt_exclude}; do
+				case "|${ARG}|${ARG##*/}|" in
+					*\|${X}\|*)	continue 2 ;;
 				esac
 			done
-			_ARGV="${_ARGV} ${_ARG}"
+			ARGV="${ARGV} ${ARG}"
 		done
-		install_pkgs=${_ARGV}
+		install_pkgs=${ARGV}
 
-		_ARGV=
-		for _ARG in ${upgrade_pkgs}; do
-			for _X in ${opt_exclude}; do
-				case "|${_ARG}|${_ARG%-*}|" in
-					*\|${_X}\|*)	continue 2 ;;
+		ARGV=
+		for ARG in ${upgrade_pkgs}; do
+			for X in ${opt_exclude}; do
+				case "|${ARG}|${ARG%-*}|" in
+					*\|${X}\|*)	continue 2 ;;
 				esac
 			done
-			_ARGV="${_ARGV} ${_ARG}"
+			_ARGV="${ARGV} ${ARG}"
 		done
-		upgrade_pkgs=${_ARGV}
+		upgrade_pkgs=${ARGV}
 	fi
 
 	if isempty ${install_pkgs} && isempty ${upgrade_pkgs}; then
@@ -1528,17 +1502,17 @@ main() {
 	istrue ${opt_use_packages} && USE_PKGS='*'
 
 	if istrue ${opt_version}; then
-		_jobs=0
-		_pids=
-		for _ARG in ${upgrade_pkgs}; do
-			while [ ${_jobs} -ge ${opt_maxjobs} ]; do
-				_jobs=$(($(ps -p ${_pids} 2>/dev/null | wc -l)-1))
-				[ ${_jobs} -lt 0 ] && _jobs=0
+		jobs=0
+		pids=
+		for ARG in ${upgrade_pkgs}; do
+			while [ ${jobs} -ge ${opt_maxjobs} ]; do
+				jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
+				[ ${jobs} -lt 0 ] && jobs=0
 			done
-			( do_version "${_ARG}" ) &
-			_pids="${_pids} $!"
-			_jobs=$(($(ps -p ${_pids} 2>/dev/null | wc -l)-1))
-			[ ${_jobs} -lt 0 ] && _jobs=0
+			( do_version "${ARG}" ) &
+			pids="${pids} $!"
+			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
+			[ ${jobs} -lt 0 ] && jobs=0
 		done
 		wait
 		tput cd
@@ -1549,64 +1523,64 @@ main() {
 		set_signal_exit='show_result; write_result "${opt_result}"; clean_tmpdir'
 		set_signal_handlers
 
-		istrue ${opt_omit_check} || pkg_sort 'upgrade_pkgs' ${upgrade_pkgs}
+		istrue ${opt_omit_check} || pkg_sort ${upgrade_pkgs}
 
 		# config
 		(istrue ${opt_config} || istrue ${opt_force_config}) && {
 			set -- ${install_pkgs}
-			_cnt=0
-			_ARGV=
-			for _ARG in ${1+"$@"}; do
-				do_install_config "${_ARG}" "${_ARGV}" || {
+			cnt=0
+			ARGV=
+			for ARG in ${1+"$@"}; do
+				do_install_config "${ARG}" "${ARGV}" || {
 					warn "Fix the problem and try again."
 					result="failed"
 					failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 				}
-				_ARGV=${_ARG}
+				ARGV=${ARG}
 			done
 			set -- ${upgrade_pkgs}
-			_cnt=0
-			_ARGV=
-			for _ARG in ${1+"$@"}; do
-				do_replace_config "${_ARG}" "${_ARGV}" || {
+			cnt=0
+			ARGV=
+			for ARG in ${1+"$@"}; do
+				do_replace_config "${ARG}" "${ARGV}" || {
 					warn "Fix the problem and try again."
 					result="failed"
 					failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 				}
-				_ARGV=${_ARG}
+				ARGV=${ARG}
 			done
 			tput cd
 		}
 
 		# install
 		set -- ${install_pkgs}
-		_cnt=0
+		cnt=0
 
-		for _ARG in ${1+"$@"}; do
-			do_install "${_ARG}" || {
+		for ARG in ${1+"$@"}; do
+			do_install "${ARG}" || {
 				warn "Fix the problem and try again."
 				result="failed"
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
-			set_result "${_ARG}" "${result:-ignored}" "${err}"
+			set_result "${ARG}" "${result:-ignored}" "${err}"
 
-			eval info \"** [$((_cnt+=1))/$#] - ${log_summary}\"
+			eval info \"** [$((cnt+=1))/$#] - ${log_summary}\"
 		done
 
 		# upgrade
 		set -- ${upgrade_pkgs}
-		_cnt=0
+		cnt=0
 		do_upgrade=1
 
-		for _ARG in ${1+"$@"}; do
-			do_replace "${_ARG}" || {
+		for ARG in ${1+"$@"}; do
+			do_replace "${ARG}" || {
 				warn "Fix the problem and try again."
 				result="failed"
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
-			set_result "${_ARG}" "${result:-ignored}" "${err}"
+			set_result "${ARG}" "${result:-ignored}" "${err}"
 
-			eval info \"** [$((_cnt+=1))/$#] - ${log_summary}\"
+			eval info \"** [$((cnt+=1))/$#] - ${log_summary}\"
 		done
 
 		isempty ${failed_pkgs} || exit 1

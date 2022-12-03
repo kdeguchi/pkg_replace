@@ -1,3 +1,7 @@
+20221203
+*Cleanup code
+*Add -dd, -RR options for strictly checking dependencies
+
 20221128
 *Fix dependencies checking in get_depend_pkgnames() and get_require_pkgnames()
 
