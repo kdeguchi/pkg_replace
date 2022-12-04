@@ -1071,14 +1071,16 @@ set_signal_handlers() {
 set_pkginfo_install() {
 	case "$1" in
 	*${PKG_BINARY_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
-	*/*@*)
-		pkg_origin="${1%@*}"
-		if [ -d "${pkg_origin}" ]; then
-			pkg_portdir=${pkg_origin}
-		else
-			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
-		fi
-		pkg_flavor="${1##*@}" ;;
+	*/*@*|*/*)
+		case $1 in
+		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
+		*)	pkg_flavor=; pkg_origin=$1; pkg_portdir=$1 ;;
+		esac
+		if [ -e "${pkg_portdir}/Makefile" ]; then
+			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+		elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
+			pkg_origin=${pkg_origin}
+		fi ;;
 	*)	set_portinfo "$1" || return 1 ;;
 	esac
 }
@@ -1092,7 +1094,7 @@ set_pkginfo_replace() {
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 
 	isempty ${pkg_flavor} &&
-		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor )
+		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor)
 
 	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
@@ -1101,14 +1103,15 @@ set_pkginfo_replace() {
 			case "${X}" in
 			*${PKG_BINARY_SUFX})	pkg_binary=${X} ;;
 			*/*@*|*/*)
-				pkg_origin="${X%@*}"
-				if [ -d "${pkg_origin}" ]; then
-					pkg_portdir=${pkg_origin}
+				case $1 in
+				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
+				*)	pkg_flavor=; pkg_origin=$X; pkg_portdir=$X ;;
+				esac
+				if [ -e "${pkg_portdir}/Makefile" ]; then
+					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
 					pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 				fi
-				pkg_flavor="${X##*@}" ;;
-			*)	pkg_origin="${pkg_origin}" ;;
 			esac
 			break ;;
 		esac
@@ -1175,7 +1178,7 @@ do_install() {
 
 	case "$1" in
 	*/*@*)	pkg_flavor="${1##*@}"; pkg=${1%@*} ;;
-	*)	pkg="$1" ;;
+	*)	pkg_flavor=; pkg="$1" ;;
 	esac
 
 	set_pkginfo_install ${pkg} || {
@@ -1217,6 +1220,7 @@ do_install() {
 	fi
 
 	if isempty ${pkg_binary}; then
+		load_make_vars
 		build_package ${pkg_portdir} || {
 			err="build error"
 			return 1
@@ -1351,6 +1355,7 @@ do_replace() {
 
 	if isempty ${pkg_binary}; then
 		load_upgrade_vars "${cur_pkgname}"
+		load_make_vars
 		build_package "${pkg_portdir}" || {
 			err="build error"
 			return 1
