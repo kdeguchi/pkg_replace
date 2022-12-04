@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221203
+PKG_REPLACE_VERSION=20221204
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -244,7 +244,7 @@ parse_options() {
 }
 
 parse_args() {
-	local ARG pkg pkgs p
+	local ARG pkg installed_pkg p
 
 	for ARG in ${1+"$@"}; do
 		pkg_flavor=; pkg_portdir=; pkg_origin=; pkg=;
@@ -265,33 +265,30 @@ parse_args() {
 		*@*/*)	;;
 		*/*@*|*/*)
 			case ${ARG} in
-			*@*)	pkg_flavor=${ARG##*@}; pkg_portdir=${ARG%@*} ;;
-			*)	pkg_flavor=; pkg_portdir=${ARG} ;;
+			*@*)	pkg_flavor=${ARG##*@}; pkg_portdir=${ARG%@*}; pkg_origin=${ARG%@*} ;;
+			*)	pkg_flavor=; pkg_portdir=${ARG}; pkg_origin=${ARG} ;;
 			esac
-			if get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null; then
+			if [ -e "${pkg_portdir}/Makefile" ]; then
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+			elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
+				pkg_origin=${pkg_origin}
 			else
-				pkg_origin=${pkg_portdir}
-				pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
-				[ -e ${pkg_portdir}/Makefile ] || {
-					warn "No such file or package: ${pkg_portdir}"
-					continue
-				}
+				warn "No such file or package: ${pkg_portdir}"
+				continue
 			fi
 			ARG=${pkg_origin} ;;
-		*)
-			ARG="${ARG}" ;;
+		*)	ARG="${ARG}" ;;
 		esac
 
-		if pkgs=$(get_installed_pkgname ${ARG}); then
+		if installed_pkg=$(get_installed_pkgname ${ARG}); then
 			if istrue ${opt_depends}; then
-				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames ${pkgs})"
+				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames ${installed_pkg})"
 			fi
-			upgrade_pkgs="${upgrade_pkgs} ${pkgs}"
+			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
 			if istrue ${opt_required_by}; then
-				upgrade_pkgs="${upgrade_pkgs} $(get_require_pkgnames ${pkgs})"
+				upgrade_pkgs="${upgrade_pkgs} $(get_require_pkgnames ${installed_pkg})"
 			fi
-			for p in ${pkgs}; do
+			for p in ${installed_pkg}; do
 				replace_pkgs="${replace_pkgs}${pkg:+ ${p}=${pkg}}"
 			done
 		elif istrue ${opt_new}; then
@@ -301,7 +298,7 @@ parse_args() {
 				install_pkgs="${install_pkgs} ${pkg_origin}@${pkg_flavor}"
 			fi
 		else
-			warn "No such file or package: ${ARG}"
+			warn "No such file or package installed: ${ARG}, please try -N option"
 			continue
 		fi
 
@@ -313,9 +310,7 @@ parse_config() {
 
 	[ -r "$1" ] || return 0
 
-	line=0
-	array=
-	func=
+	line=0; array=; func=
 
 	while read -r X; do
 		line=$((line+1))
@@ -510,6 +505,7 @@ get_pkgname_from_portdir() {
 }
 
 get_overlay_dir() {
+	# $1:origin
 	local overlay
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
 		[ -e "${overlay}/$1/Makefile" ] && echo ${overlay} && return 0
@@ -518,8 +514,10 @@ get_overlay_dir() {
 }
 
 get_portdir_from_origin() {
-	echo $(get_overlay_dir $1)/$1 || return 1
-	return 0
+	local portdir
+	portdir=$(get_overlay_dir $1)/$1
+	[ -e "${portdir}/Makefile" ] && echo ${portdir} && return 0
+	return 1
 }
 
 get_pkgname_from_origin() {
@@ -597,12 +595,14 @@ set_binary_pkginfo() {
 pkg_sort() {
 	local pkgs pkg cnt dep_list sorted_dep_list
 
+	case $# in
+	0|1)	upgrade_pkgs=$@; return 0
+	esac
+
 	pkgs=$@
 
-	isempty ${pkgs} && upgrade_pkgs=; return 1
-
 	# check installed package
-	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null
+	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null || return 1
 
 	echo -n 'Checking dependencies'
 	dep_list= ; cnt=0
