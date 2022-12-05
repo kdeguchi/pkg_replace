@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221204
+PKG_REPLACE_VERSION=20221205
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -282,7 +282,7 @@ parse_args() {
 
 		if installed_pkg=$(get_installed_pkgname ${ARG}); then
 			if istrue ${opt_depends}; then
-				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames ${installed_pkg})"
+				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames "${installed_pkg}")"
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
 			if istrue ${opt_required_by}; then
@@ -535,7 +535,7 @@ get_depend_pkgnames() {
 			*\ ${pkg}\ *)	continue;;
 			esac
 			load_make_vars
-			origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS | tr ' ' '\n' | cut -d: -f2)
+			origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2)
 		done
 		isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
 	}
@@ -604,9 +604,9 @@ pkg_sort() {
 	# check installed package
 	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null || return 1
 
+	# check dependencies
 	echo -n 'Checking dependencies'
 	dep_list= ; cnt=0
-	# check dependencies
 	while : ; do
 		echo -n '.'
 		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
@@ -1080,7 +1080,8 @@ set_pkginfo_install() {
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
 			pkg_origin=${pkg_origin}
-		fi ;;
+		fi
+		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) ;;
 	*)	set_portinfo "$1" || return 1 ;;
 	esac
 }
@@ -1101,7 +1102,7 @@ set_pkginfo_replace() {
 		"${X%%=*}")
 			X=${X#*=}
 			case "${X}" in
-			*${PKG_BINARY_SUFX})	pkg_binary=${X} ;;
+			*${PKG_BINARY_SUFX})	pkg_binary=${X}; break ;;
 			*/*@*|*/*)
 				case $1 in
 				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
@@ -1299,7 +1300,7 @@ do_replace() {
 	pkg_flavor=
 
 	if ! isempty "${failed_pkgs}" && ! istrue ${opt_keep_going}; then
-		for X in $(get_depend_pkgnames $1); do
+		for X in $(get_depend_pkgnames "$1"); do
 			case " ${failed_pkgs} " in
 			*\ ${X%-*}\ *)
 				info "Skipping '$1' because a requisite package '$X' failed"
