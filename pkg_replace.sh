@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221205
+PKG_REPLACE_VERSION=20221206
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -505,7 +505,6 @@ get_pkgname_from_portdir() {
 }
 
 get_overlay_dir() {
-	# $1:origin
 	local overlay
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
 		[ -e "${overlay}/$1/Makefile" ] && echo ${overlay} && return 0
@@ -567,13 +566,7 @@ get_binary_flavor(){
 }
 
 get_depend_binary_pkgnames() {
-	local origins origin
-	origins=
-	for origin in $(${PKG_QUERY} -F $1 '%do'); do
-		isempty "${origin}" && continue
-		origins="${origins} $(get_pkgname_from_portdir $(get_portdir_from_origin ${origin})):${origin}"
-	done
-	echo ${origins}
+	${PKG_QUERY} -F $1 '%dn-%dv:%do' || return 1
 	return 0
 }
 
@@ -1355,8 +1348,8 @@ do_replace() {
 	fi
 
 	if isempty ${pkg_binary}; then
-		load_upgrade_vars "${cur_pkgname}"
 		load_make_vars
+		load_upgrade_vars "${cur_pkgname}"
 		build_package "${pkg_portdir}" || {
 			err="build error"
 			return 1
