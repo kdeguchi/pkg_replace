@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221206
+PKG_REPLACE_VERSION=20221212
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -857,7 +857,7 @@ fetch_package() {
 find_package() {
 	local pkgfile
 
-	pkgfile="${PKGREPOSITORY}/$2${PKG_BINARY_SUFX}"
+	pkgfile="${PKGREPOSITORY}/$1${PKG_BINARY_SUFX}"
 
 	if [ -e "${pkgfile}" ]; then
 		info "Found a package of '$1': ${pkgfile}"
@@ -1338,7 +1338,7 @@ do_replace() {
 
 	if isempty ${pkg_binary} && has_config 'USE_PKGS'; then
 		if fetch_package "${pkg_name}"; then
-			find_package 'pkg_binary' "${pkg_name}" || return 1
+			pkg_binary=$(find_package ${pkg_name}) || return 1
 		else
 			case ${opt_use_packages} in
 			1)	warn "Using the source instead of the binary package." ;;
