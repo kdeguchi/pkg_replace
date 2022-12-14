@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221214
+PKG_REPLACE_VERSION=20221215
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -372,8 +372,7 @@ ${X}"
 			esac
 
 			case ${val} in
-			*[\({])
-				eval ${var}=; array=${var} ;;
+			*[\({])	eval ${var}=; array=${var} ;;
 			*)	eval ${var}=${val} ;;
 			esac ;;
 		esac
@@ -382,8 +381,7 @@ ${X}"
 
 config_match() {
 	case "|${pkg_name}|${pkg_name%-*}|${pkg_origin}|" in
-	*\|$1\|*)
-		return 0 ;;
+	*\|$1\|*)	return 0 ;;
 	*)	return 1 ;;
 	esac
 }
@@ -479,7 +477,6 @@ load_upgrade_vars() {
 
 load_env_vars() {
 	set -- ${PKG_REPLACE_ENV=$(uname -smr)}
-
 	OPSYS=$1
 	OS_VERSION=$2
 	OS_REVISION=${OS_VERSION%%[-_]*}
@@ -525,19 +522,21 @@ get_pkgname_from_origin() {
 }
 
 get_depend_pkgnames() {
+	${PKG_QUERY} '%dn-%dv' $1 | sort -u || return 1
+}
+
+get_strict_depend_pkgnames() {
 	local deps pkg origins
-	deps="$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)"
-	[ ${opt_depends} -eq 2 ] && {
-		origins=
-		for pkg in $1; do
-			case " ${deps} " in
-			*\ ${pkg}\ *)	continue;;
-			esac
-			load_make_vars
-			origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2)
-		done
-		isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
-	}
+	deps=
+	origins=
+	for pkg in $1; do
+		case " ${deps} " in
+		*\ ${pkg}\ *)	continue;;
+		esac
+		load_make_vars
+		origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2)
+	done
+	isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
 	echo ${deps} | tr ' ' '\n' | sort -u
 	return 0
 }
@@ -548,10 +547,7 @@ get_require_pkgnames() {
 }
 
 get_binary_pkgname() {
-	${PKG_QUERY} -F $1 '%n-%v' || {
-		warn "'$1' is not a valid package."
-		return 1
-	}
+	${PKG_QUERY} -F $1 '%n-%v' || return 1
 	return 0
 }
 
@@ -578,7 +574,8 @@ set_portinfo() {
 }
 
 set_binary_pkginfo() {
-	pkg_name=$(get_binary_pkgname $1) || return 1
+	pkg_name=$(get_binary_pkgname $1) ||
+		{ warn "'$1' is not a valid package."; return 1; }
 	pkg_origin=$(get_binary_origin $1) || return 1
 	pkg_flavor=$(get_binary_flavor $1)
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
@@ -604,6 +601,7 @@ pkg_sort() {
 		echo -n '.'
 		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
 		pkgs=$(get_depend_pkgnames "${pkgs}")
+		[ ${opt_depends} -eq 2 ] && pkgs=$(get_strict_depend_pkgnames "${pkgs}")
 		[ -z "${pkgs}" ] && echo 'done.' && break
 		cnt=$((cnt+1))
 	done
@@ -856,11 +854,8 @@ fetch_package() {
 
 find_package() {
 	local pkgfile
-
 	pkgfile="${PKGREPOSITORY}/$1${PKG_BINARY_SUFX}"
-
 	if [ -e "${pkgfile}" ]; then
-		info "Found a package of '$1': ${pkgfile}"
 		echo ${pkgfile}
 		return 0
 	else
@@ -1120,7 +1115,8 @@ set_pkginfo_replace() {
 		fi
 		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) || return 1
 	else
-		pkg_name=$(get_binary_pkgname ${pkg_binary}) || return 1
+		pkg_name=$(get_binary_pkgname ${pkg_binary}) ||
+			{ warn "'$1' is not a valid package." ; return 1; }
 		pkg_flavor=$(get_binary_flavor ${pkg_binary}) || return 1
 	fi
 }
@@ -1203,8 +1199,10 @@ do_install() {
 	do_logging=${opt_log_prefix:+"${opt_log_prefix}${pkg_name}.log"}
 
 	if isempty ${pkg_binary} && has_config 'USE_PKGS'; then
-		if fetch_package ${pkg_name}; then
-			pkg_binary=$(find_package ${pkg_name}) || return 1
+		if fetch_package "${pkg_name}"; then
+			pkg_binary=$(find_package ${pkg_name}) &&
+				info "Found a package of '$1': ${pkg_binary}" ||
+					return 1
 		else
 			case ${opt_use_packages} in
 			1)	warn "Using the source instead of the binary package." ;;
@@ -1338,7 +1336,9 @@ do_replace() {
 
 	if isempty ${pkg_binary} && has_config 'USE_PKGS'; then
 		if fetch_package "${pkg_name}"; then
-			pkg_binary=$(find_package ${pkg_name}) || return 1
+			pkg_binary=$(find_package ${pkg_name}) &&
+				info "Found a package of '$1': ${pkg_binary}" ||
+					return 1
 		else
 			case ${opt_use_packages} in
 			1)	warn "Using the source instead of the binary package." ;;
@@ -1368,8 +1368,9 @@ do_replace() {
 
 	pkg_tmpdir="${tmpdir}/${cur_pkgname}"
 
-	old_pkg=$(find_package ${cur_pkgname}) ||
-		old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
+	old_pkg=$(find_package ${cur_pkgname}) &&
+		info "Found a package of '$1': ${old_pkg}" ||
+			old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
 	if ! {
 		create_dir ${pkg_tmpdir} &&
