@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221212
+PKG_REPLACE_VERSION=20221214
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1490,7 +1490,7 @@ main() {
 					*\|${X}\|*)	continue 2 ;;
 				esac
 			done
-			_ARGV="${ARGV} ${ARG}"
+			ARGV="${ARGV} ${ARG}"
 		done
 		upgrade_pkgs=${ARGV}
 	fi
@@ -1519,7 +1519,7 @@ main() {
 	else
 		create_tmpdir && init_result || exit 1
 
-		set_signal_int='set_result "${_ARG:-XXX}" failed "aborted"'
+		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
 		set_signal_exit='show_result; write_result "${opt_result}"; clean_tmpdir'
 		set_signal_handlers
 
