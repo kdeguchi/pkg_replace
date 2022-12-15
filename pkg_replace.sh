@@ -730,7 +730,7 @@ install_pkg_binary_depends() {
 		dep_origin=${X##*:}
 		if {
 			installed_pkg=$(get_installed_pkgname ${dep_name%-*}) ||
-			installed_pkg=$(get_pkgname_from_origin ${dep_origin})
+				installed_pkg=$(get_pkgname_from_origin ${dep_origin})
 		}; then
 			info " Required installed package: ${dep_name} - installed"
 		else
@@ -1217,11 +1217,11 @@ do_install() {
 			err="build error"
 			return 1
 		}
-	elif ! istrue ${opt_fetch}; then
-		install_pkg_binary_depends ${pkg_binary} || {
-			err="dependency error"
-			return 1
-		}
+	#elif ! istrue ${opt_fetch}; then
+	#	install_pkg_binary_depends ${pkg_binary} || {
+	#		err="dependency error"
+	#		return 1
+	#	}
 	fi
 
 	if istrue ${opt_fetch} || istrue ${opt_build}; then
@@ -1354,11 +1354,11 @@ do_replace() {
 			err="build error"
 			return 1
 		}
-	elif ! istrue ${opt_fetch}; then
-		install_pkg_binary_depends "${pkg_binary}" || {
-			err="dependency error"
-			return 1
-		}
+	#elif ! istrue ${opt_fetch}; then
+	#	install_pkg_binary_depends "${pkg_binary}" || {
+	#		err="dependency error"
+	#		return 1
+	#	}
 	fi
 
 	if istrue ${opt_fetch} || istrue ${opt_build}; then
