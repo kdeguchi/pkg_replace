@@ -527,7 +527,7 @@ get_depend_pkgnames() {
 
 get_strict_depend_pkgnames() {
 	local deps pkg origins
-	deps=
+	deps=$1
 	origins=
 	for pkg in $1; do
 		case " ${deps} " in
