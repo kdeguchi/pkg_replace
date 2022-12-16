@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221215
+PKG_REPLACE_VERSION=20221216
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -721,11 +721,12 @@ set_automatic_flag() {
 }
 
 install_pkg_binary_depends() {
-	local dep_name dep_origin installed_pkg X
+	local dep_name dep_origin installed_pkg X dep_pkgs
 
 	info "Installing dependencies for '$1'"
 
-	for X in $(get_depend_binary_pkgnames $1); do
+	dep_pkgs=$(get_depend_binary_pkgnames $1) || return 1
+	for X in ${dep_pkgs}; do
 		dep_name=${X%:*}
 		dep_origin=${X##*:}
 		if {
@@ -735,13 +736,14 @@ install_pkg_binary_depends() {
 			info " Required installed package: ${dep_name} - installed"
 		else
 			info " Required installed package: ${dep_name} - not installed"
-			( opt_build=0; do_install "${dep_origin}" && [ "${result}" = "done" ] ) ||
+			{ opt_build=0; do_install "${dep_origin}" && [ "${result}" = "done" ]; } ||
 			{
 				warn "Failed to install '${dep_origin}'"
 				return 1
 			}
 			set_automatic_flag ${dep_origin} '1' || return 1
 			info "Returning to install of '$1'"
+			istrue ${do_upgrage} && set_pkginfo_replace $1 || set_pkginfo_install $1
 		fi
 	done
 }
@@ -1069,18 +1071,20 @@ set_pkginfo_install() {
 		elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
 			pkg_origin=${pkg_origin}
 		fi
-		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) ;;
+		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir})
+		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
+		[ -e ${pkg_binary} ] || pkg_binary=
+		;;
 	*)	set_portinfo "$1" || return 1 ;;
 	esac
 }
 
 set_pkginfo_replace() {
 	local X
-
 	pkg_name=$1
 	pkg_origin=$(get_origin_from_pkgname ${pkg_name})
-	pkg_binary=
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+	pkg_binary=
 
 	isempty ${pkg_flavor} &&
 		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor)
@@ -1217,11 +1221,11 @@ do_install() {
 			err="build error"
 			return 1
 		}
-	#elif ! istrue ${opt_fetch}; then
-	#	install_pkg_binary_depends ${pkg_binary} || {
-	#		err="dependency error"
-	#		return 1
-	#	}
+	elif ! istrue ${opt_fetch}; then
+		install_pkg_binary_depends ${pkg_binary} || {
+			err="dependency error"
+			return 1
+		}
 	fi
 
 	if istrue ${opt_fetch} || istrue ${opt_build}; then
@@ -1354,11 +1358,11 @@ do_replace() {
 			err="build error"
 			return 1
 		}
-	#elif ! istrue ${opt_fetch}; then
-	#	install_pkg_binary_depends "${pkg_binary}" || {
-	#		err="dependency error"
-	#		return 1
-	#	}
+	elif ! istrue ${opt_fetch}; then
+		install_pkg_binary_depends "${pkg_binary}" || {
+			err="dependency error"
+			return 1
+		}
 	fi
 
 	if istrue ${opt_fetch} || istrue ${opt_build}; then
