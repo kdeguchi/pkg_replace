@@ -522,12 +522,16 @@ get_pkgname_from_origin() {
 }
 
 get_depend_pkgnames() {
-	${PKG_QUERY} '%dn-%dv' $1 | sort -u || return 1
+	local deps
+	deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
+	[ ${opt_depends} -eq 2 ] && deps="${deps} $(get_strict_depend_pkgnames "$1" "${deps}")"
+	echo ${deps} | tr ' ' '\n' | sort -u
+	return 0
 }
 
 get_strict_depend_pkgnames() {
 	local deps pkg origins
-	deps=$1
+	deps=$2
 	origins=
 	for pkg in $1; do
 		case " ${deps} " in
@@ -535,6 +539,7 @@ get_strict_depend_pkgnames() {
 		esac
 		load_make_vars
 		origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2)
+		origins=$(echo ${origins} | tr ' ' '\n' | sort -u)
 	done
 	isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
 	echo ${deps} | tr ' ' '\n' | sort -u
@@ -566,22 +571,6 @@ get_depend_binary_pkgnames() {
 	return 0
 }
 
-set_portinfo() {
-	pkg_origin=$1
-	pkg_portdir=$(get_portdir_from_origin $1) || return 1
-	pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) || return 1
-	pkg_binary=
-}
-
-set_binary_pkginfo() {
-	pkg_name=$(get_binary_pkgname $1) ||
-		{ warn "'$1' is not a valid package."; return 1; }
-	pkg_origin=$(get_binary_origin $1) || return 1
-	pkg_flavor=$(get_binary_flavor $1)
-	pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
-	pkg_binary=$1
-}
-
 pkg_sort() {
 	local pkgs pkg cnt dep_list sorted_dep_list
 
@@ -601,7 +590,6 @@ pkg_sort() {
 		echo -n '.'
 		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
 		pkgs=$(get_depend_pkgnames "${pkgs}")
-		[ ${opt_depends} -eq 2 ] && pkgs=$(get_strict_depend_pkgnames "${pkgs}")
 		[ -z "${pkgs}" ] && echo 'done.' && break
 		cnt=$((cnt+1))
 	done
@@ -743,7 +731,7 @@ install_pkg_binary_depends() {
 			}
 			set_automatic_flag ${dep_origin} '1' || return 1
 			info "Returning to install of '$1'"
-			istrue ${do_upgrage} && set_pkginfo_replace $1 || set_pkginfo_install $1
+			isempty ${do_upgrade} && set_pkginfo_replace $1 || set_pkginfo_install $1
 		fi
 	done
 }
@@ -1060,7 +1048,14 @@ set_signal_handlers() {
 
 set_pkginfo_install() {
 	case "$1" in
-	*${PKG_BINARY_SUFX})	set_binary_pkginfo "$1" || return 1 ;;
+	*${PKG_BINARY_SUFX})
+		pkg_binary=$1
+		pkg_name=$(get_binary_pkgname ${pkg_binary}) ||
+			{ warn "'$1' is not a valid package."; return 1; }
+		pkg_origin=$(get_binary_origin ${pkg_binary})
+		pkg_flavor=$(get_binary_flavor ${pkg_binary})
+		pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+		;;
 	*/*@*|*/*)
 		case $1 in
 		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
@@ -1075,7 +1070,14 @@ set_pkginfo_install() {
 		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
 		[ -e ${pkg_binary} ] || pkg_binary=
 		;;
-	*)	set_portinfo "$1" || return 1 ;;
+	*)
+		pkg_name=$1
+		pkg_origin=$(get_origin_from_pkgname ${pkg_name}) || return 1
+		pkg_flavor=
+		pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
+		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
+		[ -e ${pkg_binary} ] || pkg_binary=
+		;;
 	esac
 }
 
