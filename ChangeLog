@@ -1,5 +1,10 @@
+20221217
+*Fix bugs related "-P" or "-PP" option
+ If binary package file exists,
+ pkg_replace gets dependencies from it.
+
 20221216
-*Fix bugs related -PP option
+*Fix bugs related "-PP" option
 
 20221215
 *Fix bugs in find_package() and get_binary_pkgname()

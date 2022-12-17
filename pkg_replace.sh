@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221216
+PKG_REPLACE_VERSION=20221217
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -162,6 +162,7 @@ init_pkgtools() {
 	PKG_DELETE="${PKG_BIN} delete"
 	PKG_INFO="${PKG_BIN} info"
 	PKG_QUERY="${PKG_BIN} query"
+	PKG_RQUERY="${PKG_BIN} rquery"
 	PKG_SET="${PKG_BIN} set"
 }
 
@@ -282,6 +283,7 @@ parse_args() {
 
 		if installed_pkg=$(get_installed_pkgname ${ARG}); then
 			if istrue ${opt_depends}; then
+				[ ${opt_depends} -ge 2 ] && info "'-dd' option is very slow!"
 				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames "${installed_pkg}")"
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
@@ -522,9 +524,22 @@ get_pkgname_from_origin() {
 }
 
 get_depend_pkgnames() {
-	local deps
-	deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
-	[ ${opt_depends} -eq 2 ] && deps="${deps} $(get_strict_depend_pkgnames "$1" "${deps}")"
+	local deps X pkgfile
+	deps=
+	if istrue ${opt_use_packages}; then
+		for X in $1; do
+			pkgfile=${PKGREPOSITORY}/$X${PKG_BINARY_SUFX}
+			if [ -e ${pkgfile} ]; then
+				deps="${deps} $(${PKG_QUERY} -F ${pkgfile} '%dn-%dv')"
+			else
+				install_pkgs="${install_pkgs} $X"
+			fi
+		done
+	else
+		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
+		[ ${opt_depends} -ge 2 ] &&
+			deps="${deps} $(get_strict_depend_pkgnames "$1" "${deps}")"
+	fi
 	echo ${deps} | tr ' ' '\n' | sort -u
 	return 0
 }
@@ -579,9 +594,6 @@ pkg_sort() {
 	esac
 
 	pkgs=$@
-
-	# check installed package
-	${PKG_INFO} -e ${pkgs} 2>&1 > /dev/null || return 1
 
 	# check dependencies
 	echo -n 'Checking dependencies'
@@ -1072,11 +1084,17 @@ set_pkginfo_install() {
 		;;
 	*)
 		pkg_name=$1
-		pkg_origin=$(get_origin_from_pkgname ${pkg_name}) || return 1
-		pkg_flavor=
-		pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
 		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
-		[ -e ${pkg_binary} ] || pkg_binary=
+		if istrue ${opt_use_packages} && [ -e ${pkg_binary} ]; then
+			pkg_origin=$(get_binary_origin ${pkg_binary})
+			pkg_flavor=$(get_binary_flavor ${pkg_binary})
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+		else
+			[ -e ${pkg_binary} ] || pkg_binary=
+			pkg_origin=$(${PKG_RQUERY} '%o' ${pkg_name%-*})
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+			pkg_flavor=
+		fi
 		;;
 	esac
 }
@@ -1532,6 +1550,14 @@ main() {
 
 		istrue ${opt_omit_check} || pkg_sort ${upgrade_pkgs}
 
+	# check installed package
+	for X in ${upgrade_pkgs}; do
+		get_installed_pkgname $X 2>&1 > /dev/null || {
+			install_pkgs="${install_pkgs} $X";
+			upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s|$X||g");
+		}
+	done
+
 		# config
 		(istrue ${opt_config} || istrue ${opt_force_config}) && {
 			set -- ${install_pkgs}
@@ -1545,6 +1571,7 @@ main() {
 				}
 				ARGV=${ARG}
 			done
+			tput cd
 			set -- ${upgrade_pkgs}
 			cnt=0
 			ARGV=
