@@ -551,10 +551,7 @@ get_depend_pkgnames() {
 get_strict_depend_pkgnames() {
 	local deps pkg origins pkgdeps_file dels cut_deps
 
-	deps=
-	origins=
-	dels=
-	cut_deps=
+	deps=; origins=; dels=; cut_deps=;
 
 	for pkg in $1; do
 		pkgdeps_file=${PKG_REPLACE_DB_DIR}/${pkg}.deps
@@ -566,7 +563,6 @@ get_strict_depend_pkgnames() {
 				dels=${dels}' '${pkg}
 			fi
 		else
-			#origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 			origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 			if [ -z "${origins}" ]; then
 				touch ${pkgdeps_file}
@@ -578,9 +574,7 @@ get_strict_depend_pkgnames() {
 	done
 
 	deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
-	echo ${deps} > /tmp/deps
 	dels=$(echo ${dels} | tr ' ' '\n' | sort -u)
-	echo ${dels} > /tmp/dels
 
 	for pkg in ${deps}; do
 		case ' '${dels}' ' in
@@ -589,7 +583,7 @@ get_strict_depend_pkgnames() {
 		esac
 	done
 
-	echo ${cut_deps} | tee /tmp/cut_deps
+	echo ${cut_deps}
 
 	return 0
 }
