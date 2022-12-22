@@ -1,3 +1,6 @@
+20221222
+*Option "-dd" or "-RR", as fast as possible and strictly checking dependencies
+
 20221217
 *Fix bugs related "-P" or "-PP" option
  If binary package file exists,

@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221217
+PKG_REPLACE_VERSION=20221222
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -34,7 +34,7 @@ usage: ${0##*/} [-habBcCddfFiJknNOpPPrRRuvVwW] [--automatic]
                 [-M make_env] [-x pkgname]
                 [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
-	exit 1
+	exit 0
 }
 
 isempty() {
@@ -125,6 +125,7 @@ init_variables() {
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
+	: ${PKG_REPLACE_DB_DIR=${PKG_REPLACE_DB_DIR:-"/var/tmp/pkg_replace"}}
 	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR PKG_BINARY_SUFX PKGCOMPATDIR
 	tmpdir=
 	set_signal_int=
@@ -200,7 +201,7 @@ parse_options() {
 		esac
 	done
 
-	while getopts habBcCdfFiIJj:kl:L:m:M:nNOpPrRuvVwWx: X; do
+	while getopts abBcCdfFhiIJj:kl:L:m:M:nNOpPrRuvVwWx: X; do
 		case $X in
 		a)	opt_all=1 ;;
 		b)	opt_keep_backup=1 ;;
@@ -210,6 +211,7 @@ parse_options() {
 		d)	opt_depends=$((opt_depends+1)) ;;
 		f)	opt_force=1 ;;
 		F)	opt_fetch=1 ;;
+		h)	usage ;;
 		i)	opt_interactive=1 ;;
 		J)	opt_build=1 ;;
 		j)	opt_maxjobs=$( [ ${OPTARG} -ge 1 ] 2> /dev/null && echo ${OPTARG} || sysctl -n hw.ncpu ) ;;
@@ -242,6 +244,7 @@ parse_options() {
 	istrue ${opt_omit_check} && opt_keep_going=1
 
 	optind=$((OPTIND+long_optind))
+
 }
 
 parse_args() {
@@ -282,8 +285,7 @@ parse_args() {
 		esac
 
 		if installed_pkg=$(get_installed_pkgname ${ARG}); then
-			if istrue ${opt_depends}; then
-				[ ${opt_depends} -ge 2 ] && info "'-dd' option is very slow!"
+			if ! istrue ${opt_all} && istrue ${opt_depends}; then
 				upgrade_pkgs="${upgrade_pkgs} $(get_depend_pkgnames "${installed_pkg}")"
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
@@ -537,27 +539,58 @@ get_depend_pkgnames() {
 		done
 	else
 		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
-		[ ${opt_depends} -ge 2 ] &&
-			deps="${deps} $(get_strict_depend_pkgnames "$1" "${deps}")"
+		[ ${opt_depends} -ge 2 ] && {
+			load_make_vars;
+			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
+		}
 	fi
 	echo ${deps} | tr ' ' '\n' | sort -u
 	return 0
 }
 
 get_strict_depend_pkgnames() {
-	local deps pkg origins
-	deps=$2
+	local deps pkg origins pkgdeps_file dels cut_deps
+
+	deps=
 	origins=
+	dels=
+	cut_deps=
+
 	for pkg in $1; do
-		case " ${deps} " in
-		*\ ${pkg}\ *)	continue;;
-		esac
-		load_make_vars
-		origins=${origins}" "$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2)
-		origins=$(echo ${origins} | tr ' ' '\n' | sort -u)
+		pkgdeps_file=${PKG_REPLACE_DB_DIR}/${pkg}.deps
+		if [ -f ${pkgdeps_file} ]; then
+			if [ -s ${pkgdeps_file} ]; then
+				deps=${deps}' '$(cat ${pkgdeps_file})
+				deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
+			else
+				dels=${dels}' '${pkg}
+			fi
+		else
+			#origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+			origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+			if [ -z "${origins}" ]; then
+				touch ${pkgdeps_file}
+				dels=${dels}' '${pkg}
+			else
+				deps=${deps}' '$(${PKG_QUERY} '%n-%v' ${origins} | sort -u | tee ${pkgdeps_file})
+			fi
+		fi
 	done
-	isempty ${origins} || deps=${deps}" "$(${PKG_QUERY} '%n-%v' $(echo ${origins} | tr ' ' '\n' | sort -u))
-	echo ${deps} | tr ' ' '\n' | sort -u
+
+	deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
+	echo ${deps} > /tmp/deps
+	dels=$(echo ${dels} | tr ' ' '\n' | sort -u)
+	echo ${dels} > /tmp/dels
+
+	for pkg in ${deps}; do
+		case ' '${dels}' ' in
+		*\ ${pkg}\ *)	continue ;;
+		*)	cut_deps=${cut_deps}' '${pkg} ;;
+		esac
+	done
+
+	echo ${cut_deps} | tee /tmp/cut_deps
+
 	return 0
 }
 
@@ -618,10 +651,11 @@ pkg_sort() {
 	done
 
 	# only pkgs
+	pkgs=$(echo $@ | tr '\n' ' ')
 	sorted_dep_list=${dep_list}
 	dep_list=
 	for pkg in ${sorted_dep_list}; do
-		case " $@ " in
+		case " ${pkgs} " in
 		*\ ${pkg}\ *)	dep_list="${dep_list}${pkg} " ;;
 		*)	continue ;;
 		esac
@@ -659,6 +693,15 @@ create_file() {
 create_dir() {
 	if [ ! -d "$1" ]; then
 		try mkdir -p "$1" || return 1
+	fi
+}
+
+remove_dir() {
+	if [ -d "$1" ]; then
+		try rm -rf "$1" || {
+			warn "Couldn't remove the directory: $1";
+			return 1;
+		}
 	fi
 }
 
@@ -1488,11 +1531,16 @@ main() {
 
 	if istrue ${opt_all} || { istrue ${opt_version} && ! istrue $#; }; then
 		set -- '*'
-		opt_depends=0
+		[ ${opt_depends} -eq 1 ] && opt_depends=0
 		opt_required_by=0
 	elif ! istrue $#; then
 		usage
 	fi
+
+	[ ${opt_depends} -ge 2 ] &&
+		warn "'-dd' or '-RR' option set, this mode is slow!" &&
+		create_dir ${PKG_REPLACE_DB_DIR}
+
 
 	parse_args ${1+"$@"}
 
@@ -1545,18 +1593,18 @@ main() {
 		create_tmpdir && init_result || exit 1
 
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit='show_result; write_result "${opt_result}"; clean_tmpdir'
+		set_signal_exit='show_result; write_result "${opt_result}"; remove_dir "${PKG_REPLACE_DB_DIR}"; clean_tmpdir'
 		set_signal_handlers
 
 		istrue ${opt_omit_check} || pkg_sort ${upgrade_pkgs}
 
-	# check installed package
-	for X in ${upgrade_pkgs}; do
-		get_installed_pkgname $X 2>&1 > /dev/null || {
-			install_pkgs="${install_pkgs} $X";
-			upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s|$X||g");
-		}
-	done
+		# check installed package
+		for X in ${upgrade_pkgs}; do
+			get_installed_pkgname $X 2>&1 > /dev/null || {
+				install_pkgs="${install_pkgs} $X";
+				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s|$X||g");
+			}
+		done
 
 		# config
 		(istrue ${opt_config} || istrue ${opt_force_config}) && {
@@ -1619,6 +1667,8 @@ main() {
 
 		isempty ${failed_pkgs} || exit 1
 	fi
+
+	[ ${opt_depends} -ge 2 ]  && remove_dir ${PKG_REPLACE_DB_DIR}
 
 	exit 0
 }
