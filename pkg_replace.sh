@@ -21,17 +21,17 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221222
+PKG_REPLACE_VERSION=20221223
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
 	cat <<-EOF
-usage: ${0##*/} [-habBcCddfFiJknNOpPPrRRuvVwW] [--automatic]
+usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuvVwW] [--automatic]
                 [--batch] [--clean] [--cleanup] [--config]
                 [--debug] [--exclude pkename] [--force-config]
-                [--noclean] [--nocleanup] [--noconfig] [--version]
-                [-j jobs] [-l file] [-L prefix] [-m make_args]
-                [-M make_env] [-x pkgname]
+                [--noclean] [--nocleanup] [--nocleandeps] [--noconfig]
+                [--version] [-j jobs] [-l file] [-L log-prefix]
+                [-m make_args] [-M make_env] [-x pkgname]
                 [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -100,6 +100,7 @@ init_options() {
 	opt_version=0
 	opt_beforeclean=0
 	opt_afterclean=1
+	opt_cleandeps=1
 	opt_exclude=
 	do_upgrade=0
 	do_logging=
@@ -195,6 +196,7 @@ parse_options() {
 		force-config)	opt_force_config=1 ;;
 		noclean)	opt_beforeclean=0 ;;
 		nocleanup)	opt_afterclean=0 ;;
+		nocleandeps)	opt_cleandeps=0 ;;
 		noconfig)	opt_noconf=1 ;;
 		version)	echo ${PKG_REPLACE_VERSION}; exit 0 ;;
 		*)	usage ;;
@@ -1587,7 +1589,7 @@ main() {
 		create_tmpdir && init_result || exit 1
 
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit='show_result; write_result "${opt_result}"; remove_dir "${PKG_REPLACE_DB_DIR}"; clean_tmpdir'
+		set_signal_exit='show_result; write_result "${opt_result}"; istrue ${opt_cleandeps} && remove_dir "${PKG_REPLACE_DB_DIR}"; clean_tmpdir'
 		set_signal_handlers
 
 		istrue ${opt_omit_check} || pkg_sort ${upgrade_pkgs}
@@ -1662,7 +1664,7 @@ main() {
 		isempty ${failed_pkgs} || exit 1
 	fi
 
-	[ ${opt_depends} -ge 2 ]  && remove_dir ${PKG_REPLACE_DB_DIR}
+	istrue ${opt_cleandeps} && [ ${opt_depends} -ge 2 ]  && remove_dir ${PKG_REPLACE_DB_DIR}
 
 	exit 0
 }

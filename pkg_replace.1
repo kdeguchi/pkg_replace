@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (December 22, 2022)"
-.Dd December 22, 2022
+.\" Modified by Ken DEGUCHI (December 23, 2022)"
+.Dd December 23, 2022
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -20,6 +20,7 @@
 .Op Fl \-force-config
 .Op Fl \-noclean
 .Op Fl \-nocleanup
+.Op Fl \-nocleandeps
 .Op Fl \-noconfig
 .Op Fl \-version
 .Op Fl j Ar jobs
@@ -98,6 +99,10 @@ creates temporary files in the
 directory to run as fast as possible.
 See config file
 .Ar pkg_replace.conf .
+If you set
+.Fl \-nocleandeps ,
+.Nm
+does not clean this directory.
 .Pp
 .It Fl \-debug
 Debug mode.
@@ -148,6 +153,13 @@ command.
 .Pp
 .It Fl n
 Do not actually replace any packages.
+.Pp
+.It Fl \-nocleandeps
+Do not clean
+.Ar PKG_REPLACE_DB_DIR .
+See option
+.Fl dd ,
+.Fl RR .
 .Pp
 .It Fl \-noconfig
 Do not read the configuration file.
@@ -301,7 +313,7 @@ and
 are no longer supported.
 .Sh SEE ALSO
 .Xr portupgrade 1 ,
-.Xr pkg 8
+.Xr pkg 8 ,
 .Xr ports 7 ,
 .Sh AUTHORS
 .An Securedog Aq securedog@users.sourceforge.jp
