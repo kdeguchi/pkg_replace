@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221223
+PKG_REPLACE_VERSION=20221224
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -551,9 +551,24 @@ get_depend_pkgnames() {
 }
 
 get_strict_depend_pkgnames() {
-	local deps pkg origins pkgdeps_file dels cut_deps
+	local deps pkg pkgdeps_file dels cut_deps
+	local jobs pids
 
 	deps=; origins=; dels=; cut_deps=;
+
+	jobs=0
+	pids=
+	for pkg in $1; do
+		while [ $jobs -ge ${opt_maxjobs} ]; do
+			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
+			[ ${jobs} -lt 0 ] && jobs=0
+		done
+		(get_strict_depend_pkgs ${pkg} ) &
+		pids="${pids} $!"
+		jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
+		[ ${jobs} -lt 0 ] && jobs=0
+	done
+	wait
 
 	for pkg in $1; do
 		pkgdeps_file=${PKG_REPLACE_DB_DIR}/${pkg}.deps
@@ -563,14 +578,6 @@ get_strict_depend_pkgnames() {
 				deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
 			else
 				dels=${dels}' '${pkg}
-			fi
-		else
-			origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname ${pkg})) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
-			if [ -z "${origins}" ]; then
-				touch ${pkgdeps_file}
-				dels=${dels}' '${pkg}
-			else
-				deps=${deps}' '$(${PKG_QUERY} '%n-%v' ${origins} | sort -u | tee ${pkgdeps_file})
 			fi
 		fi
 	done
@@ -588,6 +595,18 @@ get_strict_depend_pkgnames() {
 	echo ${cut_deps}
 
 	return 0
+}
+
+get_strict_depend_pkgs(){
+	local origins pkgdeps_files
+	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
+	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
+	origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname $1)) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+	if [ -z "${origins}" ]; then
+		touch ${pkgdeps_file}
+	else
+		${PKG_QUERY} '%n-%v' ${origins} | sort -u > ${pkgdeps_file}
+	fi
 }
 
 get_require_pkgnames() {
