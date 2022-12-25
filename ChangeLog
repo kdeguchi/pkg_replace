@@ -1,3 +1,9 @@
+20221224
+*More speedup checking dependencies about "-dd", "-RR" option by parallel execution
+
+20221223
+*Add "--nocleandeps" option. Don't clean PKG_REPLACE_DB_DIR directory
+
 20221222
 *Option "-dd" or "-RR", as fast as possible and strictly checking dependencies
 
