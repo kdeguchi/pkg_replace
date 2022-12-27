@@ -1,5 +1,6 @@
 20221227
 *If "-N" only set, don't install binary packages.
+*More strictly dependencies checking for "-dd" or "-RR" option
 
 20221225
 *More speedup checking dependencies about "-dd", "-RR" option by parallel execution

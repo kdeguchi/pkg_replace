@@ -655,7 +655,6 @@ pkg_sort() {
 	done
 
 	sorted_dep_list=$(echo ${dep_list} | tr ' ' '\n' | sort -u | sort -t: -k 1nr -k 2 | cut -d: -f 2)
-
 	# delete duplicate package
 	dep_list=
 	for pkg in ${sorted_dep_list}; do
@@ -665,16 +664,18 @@ pkg_sort() {
 		esac
 	done
 
-	# only pkgs
-	pkgs=$(echo $@ | tr '\n' ' ')
-	sorted_dep_list=${dep_list}
-	dep_list=
-	for pkg in ${sorted_dep_list}; do
-		case " ${pkgs} " in
-		*\ ${pkg}\ *)	dep_list="${dep_list}${pkg} " ;;
-		*)	continue ;;
-		esac
-	done
+	[ ${opt_depends} -ge 2 ] || {
+		# only pkgs
+		pkgs=$(echo $@ | tr '\n' ' ')
+		sorted_dep_list=${dep_list}
+		dep_list=
+		for pkg in ${sorted_dep_list}; do
+			case " ${pkgs} " in
+			*\ ${pkg}\ *)	dep_list="${dep_list}${pkg} " ;;
+			*)	continue ;;
+			esac
+		done
+	}
 
 	upgrade_pkgs=${dep_list}
 
