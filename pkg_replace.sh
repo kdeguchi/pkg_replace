@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221227
+PKG_REPLACE_VERSION=20221228
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1140,6 +1140,7 @@ set_pkginfo_install() {
 		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir})
 		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
 		[ -e ${pkg_binary} ] || pkg_binary=
+		istrue ${opt_use_packages} || pkg_binary=
 		;;
 	*)
 		pkg_name=$1
@@ -1154,9 +1155,9 @@ set_pkginfo_install() {
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 			pkg_flavor=
 		fi
+		istrue ${opt_use_packages} || pkg_binary=
 		;;
 	esac
-	istrue ${opt_use_packages} || pkg_binary=
 }
 
 set_pkginfo_replace() {

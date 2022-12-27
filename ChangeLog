@@ -1,3 +1,6 @@
+20221228
+*More fix bug about "-N" option
+
 20221227
 *If "-N" only set, don't install binary packages.
 *More strictly dependencies checking for "-dd" or "-RR" option
