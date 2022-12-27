@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221225
+PKG_REPLACE_VERSION=20221227
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1155,6 +1155,7 @@ set_pkginfo_install() {
 		fi
 		;;
 	esac
+	istrue ${opt_use_packages} || pkg_binary=
 }
 
 set_pkginfo_replace() {
