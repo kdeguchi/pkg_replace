@@ -1,3 +1,6 @@
+20230101
+*Fix bug "-x" option with "-dd" ("-RR") option
+
 20221228
 *More fix bug about "-N" option
 
