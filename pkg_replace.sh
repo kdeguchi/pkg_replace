@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20221228
+PKG_REPLACE_VERSION=20230101
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -241,7 +241,7 @@ parse_options() {
 
 	istrue ${opt_batch} && opt_config=0
 	istrue ${opt_batch} && opt_force_config=0
-	istrue ${opt_depends} && opt_omit_check=0
+	#istrue ${opt_depends} && opt_omit_check=0
 	istrue ${opt_force_config} && opt_config=0
 	istrue ${opt_omit_check} && opt_keep_going=1
 
@@ -1556,11 +1556,13 @@ main() {
 	fi
 
 	[ ${opt_depends} -ge 2 ] &&
-		warn "'-dd' or '-RR' option set, this mode is slow!" &&
+		info "'-dd' or '-RR' option set, this mode is slow!" &&
 		create_dir ${PKG_REPLACE_DB_DIR}
 
 
 	parse_args ${1+"$@"}
+
+	istrue ${opt_omit_check} || istrue ${opt_version} || pkg_sort ${upgrade_pkgs}
 
 	if ! isempty ${opt_exclude}; then
 		ARGV=
@@ -1613,8 +1615,6 @@ main() {
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
 		set_signal_exit='show_result; write_result "${opt_result}"; istrue ${opt_cleandeps} && remove_dir "${PKG_REPLACE_DB_DIR}"; clean_tmpdir'
 		set_signal_handlers
-
-		istrue ${opt_omit_check} || pkg_sort ${upgrade_pkgs}
 
 		# check installed package
 		for X in ${upgrade_pkgs}; do
