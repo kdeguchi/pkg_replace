@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230101
+PKG_REPLACE_VERSION=20230102
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1132,10 +1132,14 @@ set_pkginfo_install() {
 		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
 		*)	pkg_flavor=; pkg_origin=$1; pkg_portdir=$1 ;;
 		esac
-		if [ -e "${pkg_portdir}/Makefile" ]; then
-			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
-		elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
+		if pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
 			pkg_origin=${pkg_origin}
+		elif [ -e "${pkg_origin}/Makefile" ]; then
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+		else
+			pkg_portdir=$(expand_path ${pkg_portdir})
+			[ -e "${pkg_portdir}/Makefile" ] &&
+				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		fi
 		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir})
 		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
