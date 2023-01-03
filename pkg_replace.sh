@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230102
+PKG_REPLACE_VERSION=20230103
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1624,7 +1624,7 @@ main() {
 		for X in ${upgrade_pkgs}; do
 			get_installed_pkgname $X 2>&1 > /dev/null || {
 				install_pkgs="${install_pkgs} $X";
-				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s|$X||g");
+				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s| $X | |g");
 			}
 		done
 
