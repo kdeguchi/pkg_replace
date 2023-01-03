@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January  3, 2023)"
-.Dd January  3, 2023
+.\" Modified by Ken DEGUCHI (January  4, 2023)"
+.Dd January  4, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -97,12 +97,18 @@ So,
 creates temporary files in the
 .Ar PKG_REPLACE_DB_DIR
 directory to run as fast as possible.
-See config file
+See config file.
 .Ar pkg_replace.conf .
 If you set
 .Fl \-nocleandeps ,
 .Nm
 does not clean this directory.
+.Pp
+This option may fail when there is a dependency problem
+(e.g., packages have loop dependencies, package removed the ports tree).
+Especially, be careful when using
+.Fl a
+option at the same time.
 .Pp
 .It Fl \-debug
 Debug mode.

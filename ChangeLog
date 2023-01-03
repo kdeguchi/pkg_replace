@@ -1,3 +1,7 @@
+20230104
+*Man page describes the precautions to be taken when using "-dd", "-RR" option.
+*Cleanup code
+
 20230103
 *Fix bug about checking installed packages
 
