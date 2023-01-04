@@ -511,7 +511,7 @@ get_overlay_dir() {
 	local overlay pkgname
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
 		pkgname=$(get_pkgname_from_portdir ${overlay}/$1)
-		[ -z ${pkgname} ] && continue
+		[ ${#pkgname} -ge 3 ] || continue
 		echo ${overlay} && return 0
 	done
 	return 1
@@ -521,8 +521,8 @@ get_portdir_from_origin() {
 	local portdir pkgname
 	portdir=$(get_overlay_dir $1)/$1
 	pkgname=$(get_pkgname_from_portdir ${portdir})
-	[ -z ${pkgname} ] && return 1
-	 echo ${portdir} && return 0
+	[ ${#pkgname} -ge 3 ] || return 1
+	echo ${portdir} && return 0
 }
 
 get_pkgname_from_origin() {
