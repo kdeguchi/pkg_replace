@@ -508,18 +508,21 @@ get_pkgname_from_portdir() {
 }
 
 get_overlay_dir() {
-	local overlay
+	local overlay pkgname
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		[ -e "${overlay}/$1/Makefile" ] && echo ${overlay} && return 0
+		pkgname=$(get_pkgname_from_portdir ${overlay}/$1)
+		[ -z ${pkgname} ] && continue
+		echo ${overlay} && return 0
 	done
 	return 1
 }
 
 get_portdir_from_origin() {
-	local portdir
+	local portdir pkgname
 	portdir=$(get_overlay_dir $1)/$1
-	[ -e "${portdir}/Makefile" ] && echo ${portdir} && return 0
-	return 1
+	pkgname=$(get_pkgname_from_portdir ${portdir})
+	[ -z ${pkgname} ] && return 1
+	 echo ${portdir} && return 0
 }
 
 get_pkgname_from_origin() {
@@ -1136,6 +1139,7 @@ set_pkginfo_install() {
 			pkg_origin=${pkg_origin}
 		elif [ -e "${pkg_portdir}/Makefile" ]; then
 			pkg_portdir=$(expand_path ${pkg_portdir})
+			pkg_portdir=${pkg_portdir%/}
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
 			warn "'$1' not found."
@@ -1185,15 +1189,26 @@ set_pkginfo_replace() {
 				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
 				*)	pkg_flavor=; pkg_origin=$X; pkg_portdir=$X ;;
 				esac
-				if pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
-					pkg_origin=${pkg_origin}
-				elif [ -e "${pkg_portdir}/Makefile" ]; then
-					pkg_portdir=$(expand_path ${pkg_portdir})
+				if pkg_portdir=$(get_portdir_from_origin ${X}); then
+					pkg_origin=${X}
+				elif [ -e "${X}/Makefile" ]; then
+					pkg_portdir=$(expand_path ${X})
+					pkg_portdir=${pkg_portdir%/}
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
 					warn "'$X' not found."
 					return 1
-				fi
+				fi ;;
+			.)
+				pkg_portdir=$(expand_path ${X}/)
+				pkg_portdir=${pkg_portdir%/}
+				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+				;;
+			*)
+				pkg_portdir=$(expand_path ${X})
+				pkg_portdir=${pkg_portdir%/}
+				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+				;;
 			esac
 			break ;;
 		esac
