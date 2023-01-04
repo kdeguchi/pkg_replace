@@ -1135,10 +1135,10 @@ set_pkginfo_install() {
 		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
 		*)	pkg_flavor=; pkg_origin=$1; pkg_portdir=$1 ;;
 		esac
-		if pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
-			pkg_origin=${pkg_origin}
-		elif [ -e "${pkg_portdir}/Makefile" ]; then
-			pkg_portdir=$(expand_path ${pkg_portdir})
+		if pkg_portdir=$(get_portdir_from_origin ${1}); then
+			pkg_origin=${1}
+		elif [ -e "${1}/Makefile" ]; then
+			pkg_portdir=$(expand_path ${1})
 			pkg_portdir=${pkg_portdir%/}
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
