@@ -525,8 +525,8 @@ get_portdir_from_origin() {
 }
 
 get_pkgname_from_origin() {
-	${PKG_QUERY} '%n-%v' $1 || return 1
-	return 0
+	${PKG_QUERY} '%n-%v' $1 && return 0
+	return 1
 }
 
 get_depend_pkgnames() {
@@ -566,7 +566,7 @@ get_strict_depend_pkgnames() {
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 			[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 		done
-		(get_strict_depend_pkgs ${pkg} ) &
+		get_strict_depend_pkgs ${pkg} &
 		pids="${pids} $!"
 		jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 		[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
@@ -604,12 +604,13 @@ get_strict_depend_pkgs(){
 	local origin origins pkgdeps_files
 	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
-	origin=$(get_origin_from_pkgname $1) || warn "'$1' has not origin?" && return 0
+	origin=$(get_origin_from_pkgname $1) || return 0
+		#{ warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`." && return 0; }
 	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
 	else
-		${PKG_QUERY} '%n-%v' ${origins} | sort -u > ${pkgdeps_file}
+		get_pkgname_from_origin "${origins}" | tr ' ' '\n' | sort -u > ${pkgdeps_file}
 	fi
 }
 
@@ -1168,7 +1169,7 @@ set_pkginfo_install() {
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 		else
 			[ -e ${pkg_binary} ] || pkg_binary=
-			pkg_origin=$(${PKG_RQUERY} '%o' ${pkg_name%-*}) || return 1
+			pkg_origin=$(${PKG_RQUERY} -g '%o' ${pkg_name%-*}\*) || return 1
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
 			pkg_flavor=
 		fi
@@ -1603,7 +1604,6 @@ main() {
 		info "'-dd' or '-RR' option set, this mode is slow!" &&
 		create_dir ${PKG_REPLACE_DB_DIR}
 
-
 	parse_args ${1+"$@"}
 
 	istrue ${opt_omit_check} || istrue ${opt_version} || pkg_sort ${upgrade_pkgs}
@@ -1645,7 +1645,7 @@ main() {
 				jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 				[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 			done
-			( do_version "${ARG}" ) &
+			do_version "${ARG}" &
 			pids="${pids} $!"
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 			[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
@@ -1728,8 +1728,6 @@ main() {
 
 		isempty ${failed_pkgs} || exit 1
 	fi
-
-	istrue ${opt_cleandeps} && [ ${opt_depends} -ge 2 ]  && remove_dir ${PKG_REPLACE_DB_DIR}
 
 	exit 0
 }

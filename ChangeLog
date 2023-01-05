@@ -3,6 +3,7 @@
  However, this is not an essential solution.
  If "-dd", "-RR" option sets, you may see messages like "pkg_replace: 1: parameter not set".
  This type of message is no longer displayed.
+*Cleanup code.
 
 20230104
 *Man page describes the precautions to be taken when using "-dd", "-RR" option.
