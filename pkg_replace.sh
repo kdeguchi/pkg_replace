@@ -564,12 +564,12 @@ get_strict_depend_pkgnames() {
 	for pkg in $1; do
 		while [ $jobs -ge ${opt_maxjobs} ]; do
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
-			[ ${jobs} -lt 0 ] && jobs=0
+			[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 		done
 		(get_strict_depend_pkgs ${pkg} ) &
 		pids="${pids} $!"
 		jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
-		[ ${jobs} -lt 0 ] && jobs=0
+		[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 	done
 	wait
 
@@ -604,7 +604,7 @@ get_strict_depend_pkgs(){
 	local origin origins pkgdeps_files
 	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
-	origin=$(get_origin_from_pkgname $1) || return 0
+	origin=$(get_origin_from_pkgname $1) || warn "'$1' has not origin?" && return 0
 	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
@@ -1124,6 +1124,7 @@ set_signal_handlers() {
 set_pkginfo_install() {
 	case "$1" in
 	*${PKG_BINARY_SUFX})
+		# match "*.pkg"
 		pkg_binary=$1
 		pkg_name=$(get_binary_pkgname ${pkg_binary}) ||
 			{ warn "'$1' is not a valid package."; return 1; }
@@ -1132,15 +1133,20 @@ set_pkginfo_install() {
 		pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 		;;
 	*/*@*|*/*)
+		# match origin@flavor or origin
 		case $1 in
 		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
 		*)	pkg_flavor=; pkg_origin=$1; pkg_portdir=$1 ;;
 		esac
 		if pkg_portdir=$(get_portdir_from_origin ${1}); then
+			# match origin
 			pkg_origin=${1}
 		elif [ -e "${1}/Makefile" ]; then
+			# match portdir
 			pkg_portdir=$(expand_path ${1})
 			pkg_portdir=${pkg_portdir%/}
+			get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+				warn "'${pkg_portdir}' is not portdir!"; return 1
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
 			warn "'$1' not found."
@@ -1152,16 +1158,18 @@ set_pkginfo_install() {
 		istrue ${opt_use_packages} || pkg_binary=
 		;;
 	*)
+		# match other
 		pkg_name=$1
 		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
 		if istrue ${opt_use_packages} && [ -e ${pkg_binary} ]; then
+			# get informations from binary package file.
 			pkg_origin=$(get_binary_origin ${pkg_binary})
 			pkg_flavor=$(get_binary_flavor ${pkg_binary})
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 		else
 			[ -e ${pkg_binary} ] || pkg_binary=
-			pkg_origin=$(${PKG_RQUERY} '%o' ${pkg_name%-*})
-			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
+			pkg_origin=$(${PKG_RQUERY} '%o' ${pkg_name%-*}) || return 1
+			pkg_portdir=$(get_portdir_from_origin ${pkg_origin}) || return 1
 			pkg_flavor=
 		fi
 		istrue ${opt_use_packages} || pkg_binary=
@@ -1182,32 +1190,44 @@ set_pkginfo_replace() {
 	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
 		"${X%%=*}")
-			X=${X#*=}
+			# match pkgname=foo, foo is *.pkg, origin@flavor, origin or portdir.
+			X=${X#*=} # get information after '='
 			case "${X}" in
 			*${PKG_BINARY_SUFX})	pkg_binary=${X}; break ;;
 			*/*@*|*/*)
+				# match origin@flavor, origin or portdir
 				case $1 in
 				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
 				*)	pkg_flavor=; pkg_origin=$X; pkg_portdir=$X ;;
 				esac
 				if pkg_portdir=$(get_portdir_from_origin ${X}); then
+					# origin
 					pkg_origin=${X}
 				elif [ -e "${X}/Makefile" ]; then
+					# portdir
 					pkg_portdir=$(expand_path ${X})
 					pkg_portdir=${pkg_portdir%/}
+					get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+						warn "'${pkg_portdir}' is not portdir!"; return 1
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
 					warn "'$X' not found."
 					return 1
 				fi ;;
 			.)
+				# match relative path '.'
 				pkg_portdir=$(expand_path ${X}/)
 				pkg_portdir=${pkg_portdir%/}
+				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+					warn "'${pkg_portdir}' is not portdir!"; return 1
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			*)
+				#match other
 				pkg_portdir=$(expand_path ${X})
 				pkg_portdir=${pkg_portdir%/}
+				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+					warn "'${pkg_portdir}' is not portdir!"; return 1
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			esac
@@ -1623,12 +1643,12 @@ main() {
 		for ARG in ${upgrade_pkgs}; do
 			while [ ${jobs} -ge ${opt_maxjobs} ]; do
 				jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
-				[ ${jobs} -lt 0 ] && jobs=0
+				[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 			done
 			( do_version "${ARG}" ) &
 			pids="${pids} $!"
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
-			[ ${jobs} -lt 0 ] && jobs=0
+			[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 		done
 		wait
 		tput cd
