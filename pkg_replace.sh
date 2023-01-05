@@ -21,16 +21,16 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230104
+PKG_REPLACE_VERSION=20230105
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
 	cat <<-EOF
 usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuvVwW] [--automatic]
                 [--batch] [--clean] [--cleanup] [--config]
-                [--debug] [--exclude pkename] [--force-config]
-                [--noclean] [--nocleanup] [--nocleandeps] [--noconfig]
-                [--version] [-j jobs] [-l file] [-L log-prefix]
+                [--debug] [--force-config] [--noclean] [--nocleanup]
+                [--nocleandeps] [--noconfig] [--version]
+                [-j jobs] [-l file] [-L log-prefix]
                 [-m make_args] [-M make_env] [-x pkgname]
                 [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
@@ -192,7 +192,6 @@ parse_options() {
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
 		debug)		set -x ;;
-		exclude)	opt_exclude=1;;
 		force-config)	opt_force_config=1 ;;
 		noclean)	opt_beforeclean=0 ;;
 		nocleanup)	opt_afterclean=0 ;;
@@ -554,10 +553,11 @@ get_depend_pkgnames() {
 }
 
 get_strict_depend_pkgnames() {
-	local deps pkg pkgdeps_file dels cut_deps
+	local deps dels cut_deps
+	local pkg pkgdeps_file
 	local jobs pids
 
-	deps=; origins=; dels=; cut_deps=;
+	deps=; dels=; cut_deps=;
 
 	jobs=0
 	pids=
@@ -601,10 +601,11 @@ get_strict_depend_pkgnames() {
 }
 
 get_strict_depend_pkgs(){
-	local origins pkgdeps_files
+	local origin origins pkgdeps_files
 	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
-	origins=$(cd $(get_portdir_from_origin $(get_origin_from_pkgname $1)) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+	origin=$(get_origin_from_pkgname $1) || return 0
+	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
 	else
@@ -1598,7 +1599,6 @@ main() {
 			ARGV="${ARGV} ${ARG}"
 		done
 		install_pkgs=${ARGV}
-
 		ARGV=
 		for ARG in ${upgrade_pkgs}; do
 			for X in ${opt_exclude}; do

@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January  4, 2023)"
-.Dd January  4, 2023
+.\" Modified by Ken DEGUCHI (January  5, 2023)"
+.Dd January  5, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -16,7 +16,6 @@
 .Op Fl \-cleanup
 .Op Fl \-config
 .Op Fl \-debug
-.Op Fl \-exclude Ar pkgname
 .Op Fl \-force-config
 .Op Fl \-noclean
 .Op Fl \-nocleanup
@@ -223,7 +222,7 @@ Do not
 .Dq Li make clean
 after each installation.
 .Pp
-.It Fl x , Fl \-exclude Ar GLOB
+.It Fl x
 Do not replace packages matching the specified glob pattern.
 .Pp
 .El
