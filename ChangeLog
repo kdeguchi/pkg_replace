@@ -1,3 +1,7 @@
+20230106
+*Cleanup code
+*Improved error handling
+
 20230105
 *Fix error message due to broken packages dependency.
  However, this is not an essential solution.

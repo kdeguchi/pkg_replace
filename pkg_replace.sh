@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230105
+PKG_REPLACE_VERSION=20230106
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -52,11 +52,11 @@ istrue() {
 }
 
 warn() {
-	echo "** ${@-}" >&2
+	echo -e "** ${@-}" >&2
 }
 
 info() {
-	echo "--->  ${@-}"
+	echo -e "--->  ${@-}"
 }
 
 prompt_yesno() {
@@ -500,33 +500,32 @@ get_origin_from_pkgname() {
 }
 
 get_pkgname_from_portdir() {
-	[ ! -d "$1" ] && return 1
+	local pkgname
+	[ -d "$1" ] || return 1
 	load_make_vars
-	cd $1 && ${PKG_MAKE} -VPKGNAME || return 1
-	return 0
+	{ cd "$1" && pkgname=$(${PKG_MAKE} -V PKGNAME); } || return 1
+	[ ${#pkgname} -ge 3 ] && echo ${pkgname} && return 0
+	return 1
 }
 
 get_overlay_dir() {
 	local overlay pkgname
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		pkgname=$(get_pkgname_from_portdir ${overlay}/$1)
-		[ ${#pkgname} -ge 3 ] || continue
+		pkgname=$(get_pkgname_from_portdir ${overlay}/$1) || continue
 		echo ${overlay} && return 0
 	done
 	return 1
 }
 
 get_portdir_from_origin() {
-	local portdir pkgname
-	portdir=$(get_overlay_dir $1)/$1
-	pkgname=$(get_pkgname_from_portdir ${portdir})
-	[ ${#pkgname} -ge 3 ] || return 1
-	echo ${portdir} && return 0
+	local portdir
+	portdir=$(get_overlay_dir $1)/$1 && echo ${portdir} && return 0
+	return 1
 }
 
 get_pkgname_from_origin() {
-	${PKG_QUERY} '%n-%v' $1 && return 0
-	return 1
+	${PKG_QUERY} '%n-%v' $1 || return 1
+	return 0
 }
 
 get_depend_pkgnames() {
@@ -604,8 +603,8 @@ get_strict_depend_pkgs(){
 	local origin origins pkgdeps_files
 	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
-	origin=$(get_origin_from_pkgname $1) || return 0
-		#{ warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`." && return 0; }
+	origin=$(get_origin_from_pkgname $1) ||
+		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`." && return 1; }
 	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
@@ -649,13 +648,13 @@ pkg_sort() {
 	pkgs=$@
 
 	# check dependencies
-	echo -n 'Checking dependencies'
+	echo -n 'Checking dependencies' >&2
 	dep_list= ; cnt=0
 	while : ; do
-		echo -n '.'
+		echo -n '.' >&2
 		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
 		pkgs=$(get_depend_pkgnames "${pkgs}")
-		[ -z "${pkgs}" ] && echo 'done.' && break
+		[ -z "${pkgs}" ] && echo 'done.' >&2 && break
 		cnt=$((cnt+1))
 	done
 
@@ -921,12 +920,8 @@ fetch_package() {
 find_package() {
 	local pkgfile
 	pkgfile="${PKGREPOSITORY}/$1${PKG_BINARY_SUFX}"
-	if [ -e "${pkgfile}" ]; then
-		echo ${pkgfile}
-		return 0
-	else
-		return 1
-	fi
+	[ -e "${pkgfile}" ] && echo ${pkgfile} && return 0
+	return 1
 }
 
 backup_package() {
@@ -1276,7 +1271,7 @@ do_install_config() {
 	fi
 
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
-		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1"
+		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1" >&2
 		xtry make_config_conditional "${pkg_portdir}" || {
 			err="config-conditional error"
 			return 1
@@ -1284,7 +1279,7 @@ do_install_config() {
 	fi
 
 	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
-		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1"
+		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1" >&2
 		xtry make_config "${pkg_portdir}" || {
 			err="config error"
 			return 1
@@ -1393,7 +1388,7 @@ do_replace_config() {
 	fi
 
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
-		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1"
+		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1" >&2
 		xtry make_config_conditional ${pkg_portdir} || {
 			err="config-conditional error"
 			return 1
@@ -1402,7 +1397,7 @@ do_replace_config() {
 	fi
 
 	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
-		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1"
+		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1" >&2
 		xtry make_config ${pkg_portdir} || {
 			err="config error"
 			return 1
@@ -1562,7 +1557,7 @@ do_replace() {
 do_version() {
 	err=; pkg_name=; pkg_origin=
 
-	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1"
+	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1" >&2
 
 	if set_pkginfo_replace $1; then
 		case ${pkg_name} in
@@ -1575,7 +1570,7 @@ do_version() {
 		pkg_name=; : ${err:=skipped}
 	fi
 
-	printf "\\r%-$(tput co)s\\r" " "
+	printf "\\r%-$(tput co)s\\r" " " >&2
 
 	echo "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}"
 }
@@ -1603,6 +1598,9 @@ main() {
 	[ ${opt_depends} -ge 2 ] &&
 		info "'-dd' or '-RR' option set, this mode is slow!" &&
 		create_dir ${PKG_REPLACE_DB_DIR}
+
+	set_signal_exit='istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"'
+	set_signal_handlers
 
 	parse_args ${1+"$@"}
 
@@ -1656,7 +1654,7 @@ main() {
 		create_tmpdir && init_result || exit 1
 
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit='show_result; write_result "${opt_result}"; istrue ${opt_cleandeps} && remove_dir "${PKG_REPLACE_DB_DIR}"; clean_tmpdir'
+		set_signal_exit='show_result; write_result "${opt_result}"; clean_tmpdir'
 		set_signal_handlers
 
 		# check installed package
