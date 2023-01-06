@@ -505,7 +505,6 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	{ cd "$1" && pkgname=$(${PKG_MAKE} -V PKGNAME); } || return 1
 	[ ${#pkgname} -ge 3 ] && echo ${pkgname} && return 0
-	return 1
 }
 
 get_overlay_dir() {
@@ -604,7 +603,7 @@ get_strict_depend_pkgs(){
 	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
-		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`." && return 1; }
+		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."; return 1; }
 	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
@@ -1142,7 +1141,7 @@ set_pkginfo_install() {
 			pkg_portdir=$(expand_path ${1})
 			pkg_portdir=${pkg_portdir%/}
 			get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
-				warn "'${pkg_portdir}' is not portdir!"; return 1
+				{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
 			warn "'$1' not found."
@@ -1204,7 +1203,7 @@ set_pkginfo_replace() {
 					pkg_portdir=$(expand_path ${X})
 					pkg_portdir=${pkg_portdir%/}
 					get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
-						warn "'${pkg_portdir}' is not portdir!"; return 1
+						{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
 					warn "'$X' not found."
@@ -1215,7 +1214,7 @@ set_pkginfo_replace() {
 				pkg_portdir=$(expand_path ${X}/)
 				pkg_portdir=${pkg_portdir%/}
 				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
-					warn "'${pkg_portdir}' is not portdir!"; return 1
+					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			*)
@@ -1223,7 +1222,7 @@ set_pkginfo_replace() {
 				pkg_portdir=$(expand_path ${X})
 				pkg_portdir=${pkg_portdir%/}
 				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
-					warn "'${pkg_portdir}' is not portdir!"; return 1
+					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			esac
