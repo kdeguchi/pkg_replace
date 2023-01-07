@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230106
+PKG_REPLACE_VERSION=20230107
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1187,11 +1187,11 @@ set_pkginfo_replace() {
 		"${X%%=*}")
 			# match pkgname=foo, foo is *.pkg, origin@flavor, origin or portdir.
 			X=${X#*=} # get information after '='
-			case "${X}" in
+			case ${X} in
 			*${PKG_BINARY_SUFX})	pkg_binary=${X}; break ;;
 			*/*@*|*/*)
 				# match origin@flavor, origin or portdir
-				case $1 in
+				case ${X} in
 				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
 				*)	pkg_flavor=; pkg_origin=$X; pkg_portdir=$X ;;
 				esac
