@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230107
+PKG_REPLACE_VERSION=20230108
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -504,7 +504,10 @@ get_pkgname_from_portdir() {
 	[ -d "$1" ] || return 1
 	load_make_vars
 	{ cd "$1" && pkgname=$(${PKG_MAKE} -V PKGNAME); } || return 1
-	[ ${#pkgname} -ge 3 ] && echo ${pkgname} && return 0
+	case ${pkgname} in
+	''|-)	return 1 ;;
+	*)	echo ${pkgname}; return 0 ;;
+	esac
 }
 
 get_overlay_dir() {
