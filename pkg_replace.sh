@@ -607,7 +607,7 @@ get_strict_depend_pkgs(){
 	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
 		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."; return 1; }
-	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS -V LIB_DEPENDS -V RUN_DEPENDS -V TEST_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch ${pkgdeps_file}
 	else
