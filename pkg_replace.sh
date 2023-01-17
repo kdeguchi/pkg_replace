@@ -1598,10 +1598,10 @@ main() {
 	fi
 
 	[ ${opt_depends} -ge 2 ] && {
-		info "'-dd' or '-RR' option set, this mode is slow!" &&
-		{ istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"; } &&
-		create_dir ${PKG_REPLACE_DB_DIR} &&
-		set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}";';
+		info "'-dd' or '-RR' option set, this mode is slow!";
+		{ istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"; };
+		{ create_dir ${PKG_REPLACE_DB_DIR} &&
+			set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}";'; }
 	}
 
 	parse_args ${1+"$@"}
