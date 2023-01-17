@@ -1,5 +1,7 @@
 20230117
 *Fix trap action
+*Add more dependencies checking, i.e., LIB_DEPENDS, RUN_DEPENDS and
+ TEST_DEPENDS to "-dd" or "-RR" option
 
 20230108
 *Cleanup code
@@ -14,7 +16,8 @@
 20230105
 *Fix error message due to broken packages dependency.
  However, this is not an essential solution.
- If "-dd", "-RR" option sets, you may see messages like "pkg_replace: 1: parameter not set".
+ If "-dd", "-RR" option sets, you may see messages like
+ "pkg_replace: 1: parameter not set".
  This type of message is no longer displayed.
 *Cleanup code.
 
