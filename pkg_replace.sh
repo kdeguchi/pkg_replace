@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230108
+PKG_REPLACE_VERSION=20230117
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1597,12 +1597,12 @@ main() {
 		usage
 	fi
 
-	[ ${opt_depends} -ge 2 ] &&
+	[ ${opt_depends} -ge 2 ] && {
 		info "'-dd' or '-RR' option set, this mode is slow!" &&
-		create_dir ${PKG_REPLACE_DB_DIR}
+		create_dir ${PKG_REPLACE_DB_DIR} &&
+		set_signal_exit='istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}";';
+	}
 
-	set_signal_exit='istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"'
-	set_signal_handlers
 
 	parse_args ${1+"$@"}
 
@@ -1656,7 +1656,7 @@ main() {
 		create_tmpdir && init_result || exit 1
 
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit='show_result; write_result "${opt_result}"; clean_tmpdir'
+		set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir'
 		set_signal_handlers
 
 		# check installed package
