@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230117
+PKG_REPLACE_VERSION=20230118
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -117,12 +117,12 @@ init_variables() {
 	init_pkgtools
 	: ${MAKE="make"}
 	: ${PORTSDIR="$(${PKG_CONFIG} PORTSDIR)"}
-	: ${OVERLAYS="$(cd ${PORTSDIR} && ${MAKE} -V OVERLAYS)"}
+	: ${OVERLAYS="$(cd "${PORTSDIR}" && ${MAKE} -V OVERLAYS)"}
 	: ${PKGREPOSITORY="$(${PKG_CONFIG} PKG_CACHEDIR)/All"}
 	: ${PACKAGEROOT="https://pkg.FreeBSD.org"}
 	: ${PKG_DBDIR="$(${PKG_CONFIG} PKG_DBDIR)"}
-	: ${PKG_BINARY_SUFX="$(cd ${PORTSDIR} && ${MAKE} -V PKG_SUFX -f "Mk/bsd.port.mk")"}
-	: ${PKG_FETCH="$(cd ${PORTSDIR} && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
+	: ${PKG_BINARY_SUFX="$(cd "${PORTSDIR}" && ${MAKE} -V PKG_SUFX -f "Mk/bsd.port.mk")"}
+	: ${PKG_FETCH="$(cd "${PORTSDIR}" && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
@@ -270,8 +270,8 @@ parse_args() {
 		*@*/*)	;;
 		*/*@*|*/*)
 			case ${ARG} in
-			*@*)	pkg_flavor=${ARG##*@}; pkg_portdir=${ARG%@*}; pkg_origin=${ARG%@*} ;;
-			*)	pkg_flavor=; pkg_portdir=${ARG}; pkg_origin=${ARG} ;;
+			*@*)	pkg_flavor=${ARG##*@}; pkg_portdir="${ARG%@*}"; pkg_origin="${ARG%@*}" ;;
+			*)	pkg_flavor=; pkg_portdir="${ARG}"; pkg_origin="${ARG}" ;;
 			esac
 			if [ -e "${pkg_portdir}/Makefile" ]; then
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
@@ -320,26 +320,26 @@ parse_config() {
 	while read -r X; do
 		line=$((line+1))
 
-		case ${X} in
+		case $X in
 		''|\#*)	continue ;;
 		esac
 
 		case ${func:+function}${array:+array} in
 		function)
 			func="${func}
-${X}"
-			case ${X} in
+$X"
+			case $X in
 			'}'|'};')
 				eval "${func}"
 				func= ;;
 			esac ;;
 		array)
-			case ${X} in
+			case $X in
 			*[\'\"]?*[\'\"]*)
 				var=${X#*[\'\"]}
 				var=${var%%[\'\"]*}
 
-				case ${X} in
+				case $X in
 				*=\>*[\'\"]*[\'\"]*)
 					val=${X#*=\>*[\'\"]}
 					val=${val%[\'\"]*}
@@ -355,7 +355,7 @@ ${X}"
 				return 1 ;;
 			esac ;;
 		*)
-			case ${X} in
+			case $X in
 			*\(\)|*\(\)*{)
 				var=${X%%\(\)*}
 				var=${var%${var##*[! ]}}
@@ -426,9 +426,9 @@ run_config_script() {
 
 run_rc_script() {
 	local files file
-	files="$(${PKG_QUERY} '%Fp' $1)"
+	files=$(${PKG_QUERY} '%Fp' $1)
 	for file in ${files}; do
-		case ${file} in
+		case "${file}" in
 		*.sample) ;;
 		*/etc/rc.d/*)
 			if [ -x "${file}" ]; then
@@ -521,7 +521,7 @@ get_overlay_dir() {
 
 get_portdir_from_origin() {
 	local portdir
-	portdir=$(get_overlay_dir $1)/$1 && echo ${portdir} && return 0
+	portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
 	return 1
 }
 
@@ -535,9 +535,9 @@ get_depend_pkgnames() {
 	deps=
 	if istrue ${opt_use_packages}; then
 		for X in $1; do
-			pkgfile=${PKGREPOSITORY}/$X${PKG_BINARY_SUFX}
+			pkgfile="${PKGREPOSITORY}/$X${PKG_BINARY_SUFX}"
 			if [ -e ${pkgfile} ]; then
-				deps="${deps} $(${PKG_QUERY} -F ${pkgfile} '%dn-%dv')"
+				deps="${deps} $(${PKG_QUERY} -F "${pkgfile}" '%dn-%dv')"
 			else
 				install_pkgs="${install_pkgs} $X"
 			fi
@@ -575,10 +575,10 @@ get_strict_depend_pkgnames() {
 	wait
 
 	for pkg in $1; do
-		pkgdeps_file=${PKG_REPLACE_DB_DIR}/${pkg}.deps
-		if [ -f ${pkgdeps_file} ]; then
-			if [ -s ${pkgdeps_file} ]; then
-				deps=${deps}' '$(cat ${pkgdeps_file})
+		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${pkg}.deps"
+		if [ -f "${pkgdeps_file}" ]; then
+			if [ -s "${pkgdeps_file}" ]; then
+				deps=${deps}' '$(cat "${pkgdeps_file}")
 				deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
 			else
 				dels=${dels}' '${pkg}
@@ -603,15 +603,15 @@ get_strict_depend_pkgnames() {
 
 get_strict_depend_pkgs(){
 	local origin origins pkgdeps_files
-	pkgdeps_file=${PKG_REPLACE_DB_DIR}/$1.deps
-	istrue ${opt_cleandeps} || { [ -e ${pkgdeps_file} ] && return 0; }
+	pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
+	istrue ${opt_cleandeps} || { [ -e "${pkgdeps_file}" ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
 		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."; return 1; }
-	origins=$(cd $(get_portdir_from_origin ${origin}) && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
-		touch ${pkgdeps_file}
+		touch "${pkgdeps_file}"
 	else
-		get_pkgname_from_origin "${origins}" | tr ' ' '\n' | sort -u > ${pkgdeps_file}
+		get_pkgname_from_origin "${origins}" | tr ' ' '\n' | sort -u > "${pkgdeps_file}"
 	fi
 }
 
@@ -765,7 +765,7 @@ build_package() {
 		info "Building '$1'${PKG_MAKE_ARGS:+ with make flags: ${PKG_MAKE_ARGS}}"
 	fi
 
-	cd $1 || return 1
+	cd "$1" || return 1
 
 	if ! istrue ${opt_fetch}; then
 		run_config_script 'BEFOREBUILD'
@@ -831,7 +831,7 @@ install_package() {
 	istrue ${opt_force} && install_args="-DFORCE_PKG_REGISTER"
 	istrue ${opt_batch} && install_args="${_install_args} -DBATCH"
 
-	cd $1 || return 1
+	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
 	if istrue ${opt_afterclean}; then
 		clean_package $1
@@ -866,7 +866,7 @@ clean_package() {
 
 	info "Cleaning '$1'"
 
-	cd $1 || return 1
+	cd "$1" || return 1
 
 	try ${PKG_MAKE} ${clean_args} clean || return 1
 }
@@ -884,7 +884,7 @@ do_fetch() {
 	esac
 
 	case ${fetch_path} in
-	*/*)	cd ${fetch_path%/*}/ || return 1 ;;
+	*/*)	cd "${fetch_path%/*}/" || return 1 ;;
 	esac
 
 	try ${fetch_cmd} ${fetch_args} $1
@@ -902,7 +902,7 @@ fetch_package() {
 	pkg=$1${PKG_BINARY_SUFX}
 	if [ -e "${PKGREPOSITORY}/${pkg}" ]; then
 		return 0
-	elif ! create_dir ${PKGREPOSITORY} || [ ! -w "${PKGREPOSITORY}" ]; then
+	elif ! create_dir "${PKGREPOSITORY}" || [ ! -w "${PKGREPOSITORY}" ]; then
 		warn "You do not own ${PKGREPOSITORY}."
 		return 1
 	fi
@@ -943,7 +943,7 @@ backup_file() {
 restore_package() {
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
-		install_pkg_binary $1 || return 1
+		install_pkg_binary "$1" || return 1
 	else
 		return 1
 	fi
@@ -952,15 +952,15 @@ restore_package() {
 restore_file() {
 	if [ -e "$1" ] && [ ! -e "$2" ]; then
 		info "Restoring the ${1##*/} file"
-		try mv -f $1 $2 || return 1
+		try mv -f "$1" "$2" || return 1
 	fi
 }
 
 process_package() {
 	if istrue ${opt_keep_backup} && [ -e "$1" ] && [ ! -e "${PKG_BACKUP_DIR}/${1##*/}" ]; then
 		info "Keeping the old version in '${PKG_BACKUP_DIR}'"
-		create_dir ${PKG_BACKUP_DIR} || return 1
-		try mv -f $1 ${PKG_BACKUP_DIR} || return 1
+		create_dir "${PKG_BACKUP_DIR}" || return 1
+		try mv -f "$1" "${PKG_BACKUP_DIR}" || return 1
 	fi
 }
 
@@ -977,7 +977,7 @@ preserve_libs() {
 	if ! isempty ${preserved_files}; then
 		info "Preserving the shared libraries"
 		create_dir "${PKGCOMPATDIR}" || return 1
-		try cp -af ${preserved_files} ${PKGCOMPATDIR} || return 1
+		try cp -af "${preserved_files}" "${PKGCOMPATDIR}" || return 1
 	fi
 }
 
@@ -989,7 +989,7 @@ clean_libs() {
 	info "Cleaning the preserved shared libraries"
 	del_files=
 	for file in ${preserved_files}; do
-		dest=${PKGCOMPATDIR}/${file##*/}
+		dest="${PKGCOMPATDIR}/${file##*/}"
 		if [ -e "${dest}" ]; then
 			del_files="${del_files} ${dest}"
 		else
@@ -997,7 +997,7 @@ clean_libs() {
 		fi
 	done
 	if ! isempty ${del_files}; then
-		try rm -f ${del_files} || return 1
+		try rm -f "${del_files}" || return 1
 	fi
 }
 
@@ -1123,7 +1123,7 @@ set_pkginfo_install() {
 	case "$1" in
 	*${PKG_BINARY_SUFX})
 		# match "*.pkg"
-		pkg_binary=$1
+		pkg_binary="$1"
 		pkg_name=$(get_binary_pkgname ${pkg_binary}) ||
 			{ warn "'$1' is not a valid package."; return 1; }
 		pkg_origin=$(get_binary_origin ${pkg_binary})
@@ -1133,36 +1133,36 @@ set_pkginfo_install() {
 	*/*@*|*/*)
 		# match origin@flavor or origin
 		case $1 in
-		*@*)	pkg_flavor=${1##*@}; pkg_origin=${1%@*}; pkg_portdir=${1%@*} ;;
-		*)	pkg_flavor=; pkg_origin=$1; pkg_portdir=$1 ;;
+		*@*)	pkg_flavor=${1##*@}; pkg_origin="${1%@*}"; pkg_portdir="${1%@*}" ;;
+		*)	pkg_flavor=; pkg_origin="$1"; pkg_portdir="$1" ;;
 		esac
-		if pkg_portdir=$(get_portdir_from_origin ${1}); then
+		if pkg_portdir=$(get_portdir_from_origin "$1"); then
 			# match origin
-			pkg_origin=${1}
+			pkg_origin=$1
 		elif [ -e "${1}/Makefile" ]; then
 			# match portdir
-			pkg_portdir=$(expand_path ${1})
+			pkg_portdir=$(expand_path "$1")
 			pkg_portdir=${pkg_portdir%/}
-			get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+			get_pkgname_from_portdir "${pkg_portdir}" 2>&1 > /dev/null ||
 				{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
 			warn "'$1' not found."
 			return 1
 		fi
-		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir})
-		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
+		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}")
+		pkg_binary="${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}"
 		[ -e ${pkg_binary} ] || pkg_binary=
 		istrue ${opt_use_packages} || pkg_binary=
 		;;
 	*)
 		# match other
 		pkg_name=$1
-		pkg_binary=${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}
+		pkg_binary="${PKGREPOSITORY}/${pkg_name}${PKG_BINARY_SUFX}"
 		if istrue ${opt_use_packages} && [ -e ${pkg_binary} ]; then
 			# get informations from binary package file.
-			pkg_origin=$(get_binary_origin ${pkg_binary})
-			pkg_flavor=$(get_binary_flavor ${pkg_binary})
+			pkg_origin=$(get_binary_origin "${pkg_binary}")
+			pkg_flavor=$(get_binary_flavor "${pkg_binary}")
 			pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 		else
 			[ -e ${pkg_binary} ] || pkg_binary=
@@ -1191,20 +1191,20 @@ set_pkginfo_replace() {
 			# match pkgname=foo, foo is *.pkg, origin@flavor, origin or portdir.
 			X=${X#*=} # get information after '='
 			case ${X} in
-			*${PKG_BINARY_SUFX})	pkg_binary=${X}; break ;;
+			*${PKG_BINARY_SUFX})	pkg_binary="${X}"; break ;;
 			*/*@*|*/*)
 				# match origin@flavor, origin or portdir
-				case ${X} in
-				*@*)	pkg_flavor=${X##*@}; pkg_origin=${X%@*}; pkg_portdir=${X%@*} ;;
-				*)	pkg_flavor=; pkg_origin=$X; pkg_portdir=$X ;;
+				case $X in
+				*@*)	pkg_flavor=${X##*@}; pkg_origin="${X%@*}"; pkg_portdir="${X%@*}" ;;
+				*)	pkg_flavor=; pkg_origin="$X"; pkg_portdir="$X" ;;
 				esac
-				if pkg_portdir=$(get_portdir_from_origin ${X}); then
+				if pkg_portdir=$(get_portdir_from_origin "$X"); then
 					# origin
-					pkg_origin=${X}
+					pkg_origin=$X
 				elif [ -e "${X}/Makefile" ]; then
 					# portdir
-					pkg_portdir=$(expand_path ${X})
-					pkg_portdir=${pkg_portdir%/}
+					pkg_portdir=$(expand_path "$X")
+					pkg_portdir="${pkg_portdir%/}"
 					get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
 						{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
@@ -1214,7 +1214,7 @@ set_pkginfo_replace() {
 				fi ;;
 			.)
 				# match relative path '.'
-				pkg_portdir=$(expand_path ${X}/)
+				pkg_portdir=$(expand_path "${X}/")
 				pkg_portdir=${pkg_portdir%/}
 				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
 					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
@@ -1222,8 +1222,8 @@ set_pkginfo_replace() {
 				;;
 			*)
 				#match other
-				pkg_portdir=$(expand_path ${X})
-				pkg_portdir=${pkg_portdir%/}
+				pkg_portdir=$(expand_path "$X")
+				pkg_portdir="${pkg_portdir%/}"
 				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
 					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
@@ -1240,11 +1240,11 @@ set_pkginfo_replace() {
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
 			trace_moved ${pkg_origin} || { err="removed"; return 1; }
 		fi
-		pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) || return 1
+		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") || return 1
 	else
-		pkg_name=$(get_binary_pkgname ${pkg_binary}) ||
+		pkg_name=$(get_binary_pkgname "${pkg_binary}") ||
 			{ warn "'$1' is not a valid package." ; return 1; }
-		pkg_flavor=$(get_binary_flavor ${pkg_binary}) || return 1
+		pkg_flavor=$(get_binary_flavor "${pkg_binary}") || return 1
 	fi
 }
 
@@ -1340,12 +1340,12 @@ do_install() {
 
 	if isempty ${pkg_binary}; then
 		load_make_vars
-		build_package ${pkg_portdir} || {
+		build_package "${pkg_portdir}" || {
 			err="build error"
 			return 1
 		}
 	elif ! istrue ${opt_fetch}; then
-		install_pkg_binary_depends ${pkg_binary} || {
+		install_pkg_binary_depends "${pkg_binary}" || {
 			err="dependency error"
 			return 1
 		}
@@ -1358,8 +1358,8 @@ do_install() {
 
 	if {
 		case ${pkg_binary} in
-		'')	install_package ${pkg_portdir} ;;
-		*)	install_pkg_binary ${pkg_binary} ;;
+		'')	install_package "${pkg_portdir}" ;;
+		*)	install_pkg_binary "${pkg_binary}" ;;
 		esac
 	}; then
 		result="done"
@@ -1391,7 +1391,7 @@ do_replace_config() {
 
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1" >&2
-		xtry make_config_conditional ${pkg_portdir} || {
+		xtry make_config_conditional "${pkg_portdir}" || {
 			err="config-conditional error"
 			return 1
 		}
@@ -1400,7 +1400,7 @@ do_replace_config() {
 
 	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config: %-${#2}s\\r" "$1" >&2
-		xtry make_config ${pkg_portdir} || {
+		xtry make_config "${pkg_portdir}" || {
 			err="config error"
 			return 1
 		}
@@ -1430,7 +1430,7 @@ do_replace() {
 
 	cur_pkgname=$1
 
-	set_pkginfo_replace $1 || {
+	set_pkginfo_replace "$1" || {
 		warn "Skipping '$1'${err:+ - ${err}}."
 		result="skipped"
 		return 0
@@ -1500,7 +1500,7 @@ do_replace() {
 			old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
 	if ! {
-		create_dir ${pkg_tmpdir} &&
+		create_dir "${pkg_tmpdir}" &&
 		backup_package ${cur_pkgname} ${old_pkg} &&
 		preserve_libs ${cur_pkgname}
 		automatic_flag=$(${PKG_QUERY} '%a' ${cur_pkgname})
@@ -1515,9 +1515,9 @@ do_replace() {
 		if {
 			case ${pkg_binary} in
 			'')
-				pkg_name=$(get_pkgname_from_portdir ${pkg_portdir}) &&
-					install_package ${pkg_portdir} ;;
-			*)	install_pkg_binary ${pkg_binary} ;;
+				pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") &&
+					install_package "${pkg_portdir}" ;;
+			*)	install_pkg_binary "${pkg_binary}" ;;
 			esac
 		}; then
 			result="done"
@@ -1600,7 +1600,7 @@ main() {
 	[ ${opt_depends} -ge 2 ] && {
 		info "'-dd' or '-RR' option set, this mode is slow!";
 		{ istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"; };
-		{ create_dir ${PKG_REPLACE_DB_DIR} &&
+		{ create_dir "${PKG_REPLACE_DB_DIR}" &&
 			set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '; }
 	}
 
