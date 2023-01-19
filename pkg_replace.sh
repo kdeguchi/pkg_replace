@@ -956,10 +956,13 @@ backup_file() {
 }
 
 restore_package() {
+	local pkgname
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
-		install_pkg_binary "$1" || return 1
-		istrue ${pkg_unlock} && ${PKG_LOCK} -qy $1
+		install_pkg_binary "$1"
+		pkgname=${1##*/}
+		pkgname=${pkgname%${PKG_BINARY_SUFX}}
+		istrue ${pkg_unlock} && ${PKG_LOCK} -y "${pkgname}"
 	else
 		return 1
 	fi
@@ -1554,9 +1557,9 @@ do_replace() {
 			old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
 	istrue ${pkg_unlock} &&
-		{ ${PKG_UNLOCK} -qy ${cur_pkgname}
+		{ ${PKG_UNLOCK} -y ${cur_pkgname}
 			if get_lock ${cur_pkgname}; then
-				warn "Failed unlocked '${cur_pkgname}'"
+				warn "Unlock '${cur_pkgname} failed!'"
 			else
 				info "Unlock '${cur_pkgname}'"
 			fi
