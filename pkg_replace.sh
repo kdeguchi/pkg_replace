@@ -650,8 +650,8 @@ get_lock() {
 	local lock
 	lock=$(${PKG_QUERY} '%k' $1) || return 1
 	case ${lock} in
-	0) return 1 ;;
-	1) return 0 ;;
+	0)	return 1 ;;
+	1)	return 0 ;;
 	esac
 }
 
@@ -1628,7 +1628,6 @@ do_version() {
 	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1" >&2
 
 	if set_pkginfo_replace "$1"; then
-		get_lock "${pkg_name}" && pkg_name=; : ${err:=lock}
 		case ${pkg_name} in
 		"$1")	return 0 ;;
 		esac
