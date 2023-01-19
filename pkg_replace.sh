@@ -959,6 +959,7 @@ restore_package() {
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
 		install_pkg_binary "$1" || return 1
+		istrue ${pkg_unlock} && ${PKG_LOCK} -qy $1
 	else
 		return 1
 	fi
@@ -992,7 +993,7 @@ preserve_libs() {
 	if ! isempty ${preserved_files}; then
 		info "Preserving the shared libraries"
 		create_dir "${PKGCOMPATDIR}" || return 1
-		try cp -af "${preserved_files}" "${PKGCOMPATDIR}" || return 1
+		try cp -af ${preserved_files} "${PKGCOMPATDIR}" || return 1
 	fi
 }
 
@@ -1552,6 +1553,15 @@ do_replace() {
 		info "Found a package of '$1': ${old_pkg}" ||
 			old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
+	istrue ${pkg_unlock} &&
+		{ ${PKG_UNLOCK} -qy ${cur_pkgname}
+			if get_lock ${cur_pkgname}; then
+				warn "Failed unlocked '${cur_pkgname}'"
+			else
+				info "Unlock '${cur_pkgname}'"
+			fi
+		}
+
 	if ! {
 		create_dir "${pkg_tmpdir}" &&
 		backup_package ${cur_pkgname} ${old_pkg} &&
@@ -1563,9 +1573,6 @@ do_replace() {
 		try rm -rf "${pkg_tmpdir}"
 		return 1
 	fi
-
-	istrue ${pkg_lock} &&
-		{ ${PKG_UNLOCK} -q ${cur_pkgname} || warn "Failed unlocked '${cur_pkgname}'"; }
 
 	if deinstall_package "${cur_pkgname}"; then
 		if {
