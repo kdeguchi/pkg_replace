@@ -829,11 +829,14 @@ install_pkg_binary_depends() {
 }
 
 install_pkg_binary() {
-	local install_args
+	local install_args pkgname
 	install_args=
 	info "Installing '$1'"
 	istrue ${opt_force} && install_args="-f"
-	xtry ${PKG_ADD} ${install_args} $1 || return 1
+	xtry ${PKG_ADD} ${install_args} "$1" || return 1
+	pkgname=${1##*/}
+	pkgname=${pkgname%${PKG_BINARY_SUFX}}
+	istrue ${pkg_unlock} && ${PKG_LOCK} -y "${pkgname}"
 	run_config_script 'AFTERINSTALL'
 }
 
@@ -960,9 +963,6 @@ restore_package() {
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
 		install_pkg_binary "$1"
-		pkgname=${1##*/}
-		pkgname=${pkgname%${PKG_BINARY_SUFX}}
-		istrue ${pkg_unlock} && ${PKG_LOCK} -y "${pkgname}"
 	else
 		return 1
 	fi
