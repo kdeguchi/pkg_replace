@@ -1,168 +1,175 @@
+20230119
+*Enabled to handle locked packages with new "-U" option.
+ If "-U" option is not present, locked packages are skipped.
+ See pkg_replace(1).
+
 20230118
 *Variables containing file and directory are enclosed in double quotes.
 
 20230117
-*Fix trap action
+*Fix trap action.
 
 20230108
-*Cleanup code
+*Cleanup code.
 
 20230107
-*Fix typo
+*Fix typo.
 
 20230106
-*Cleanup code
-*Improved error handling
+*Cleanup code.
+*Improved error handling.
 
 20230105
 *Fix error message due to broken packages dependency.
  However, this is not an essential solution.
- If "-dd", "-RR" option sets, you may see messages like "pkg_replace: 1: parameter not set".
+ If "-dd", "-RR" option sets, you may see messages like
+ "pkg_replace: 1: parameter not set".
  This type of message is no longer displayed.
 *Cleanup code.
 
 20230104
-*Man page describes the precautions to be taken when using "-dd", "-RR" option.
-*Cleanup code
+*Man page describes the precautions to be taken when using
+ "-dd", "-RR" option.
+*Cleanup code.
 
 20230103
-*Fix bug about checking installed packages
+*Fix bug about checking installed packages.
 
 20230102
-*Fix bug about getting ports directory
+*Fix bug about getting ports directory.
 
 20230101
-*Fix bug "-x" option with "-dd" ("-RR") option
+*Fix bug "-x" option with "-dd" ("-RR") option.
 
 20221228
-*More fix bug about "-N" option
+*More fix bug about "-N" option.
 
 20221227
 *If "-N" only set, don't install binary packages.
-*More strictly dependencies checking for "-dd" or "-RR" option
+*More strictly dependencies checking for "-dd" or "-RR" option.
 
 20221225
-*More speedup checking dependencies about "-dd", "-RR" option by parallel execution
+*More speedup checking dependencies about "-dd", "-RR" option by
+ parallel execution.
 
 20221223
-*Add "--nocleandeps" option. Don't clean PKG_REPLACE_DB_DIR directory
+*Add "--nocleandeps" option. Don't clean PKG_REPLACE_DB_DIR directory.
 
 20221222
-*Option "-dd" or "-RR", as fast as possible and strictly checking dependencies
+*Option "-dd" or "-RR", as fast as possible and strictly checking
+ dependencies.
 
 20221217
 *Fix bugs related "-P" or "-PP" option
- If binary package file exists,
- pkg_replace gets dependencies from it.
+ If binary package file exists, pkg_replace gets dependencies from it.
 
 20221216
-*Fix bugs related "-PP" option
+*Fix bugs related "-PP" option.
 
 20221215
-*Fix bugs in find_package() and get_binary_pkgname()
+*Fix bugs in find_package() and get_binary_pkgname().
 
 20221214
-*Fix bug in main()
+*Fix bug in main().
 
 20221212
-*Fix bug in find_package()
+*Fix bug in find_package().
 
 20221206
-*Cleanup code
-*Add -dd, -RR options for strictly checking dependencies
-*Fix bugs
+*Cleanup code.
+*Add -dd, -RR options for strictly checking dependencies.
+*Fix bugs.
 
 20221128
-*Fix dependencies checking in get_depend_pkgnames() and get_require_pkgnames()
+*Fix dependencies checking in get_depend_pkgnames() and get_require_pkgnames().
 
 20221012
-*Fix PKG_SUFX warning message
+*Fix PKG_SUFX warning message.
 
 20221011
-*Fix bug about PKG_SUFX
+*Fix bug about PKG_SUFX.
 
 20220304
-*Fix bugs for new package suffix
+*Fix bugs for new package suffix.
 
 20220303
-*Fix bug clean_libs()
+*Fix bug clean_libs().
 
 20210726
-*Support new package suffix .pkg
+*Support new package suffix ".pkg".
 
 20200821
-*Fix bug in function install_package: install_args -> _install_args
+*Fix bug in function install_package: install_args -> _install_args.
 
 20200803
-*Add --exclude option
-*Speed up packages version checking
+*Add "--exclude"" option.
+*Speed up packages version checking.
 
 20200717
-*Fix bug checking FLAVORS
-*Fix underscore missing
+*Fix bug checking FLAVORS.
+*Fix underscore missing.
 
 20200623
-*If pkg_binary is set, do not run make_config and make_config_conditional
-*Cleanup code
+*If pkg_binary is set, do not run make_config and `make_config_conditional`.
+*Cleanup code.
 
 20200622
-*Fix flavor check in set_pkginfo_install and set_pkginfo_replace
-*Cleanup code
+*Fix flavor check in set_pkginfo_install and set_pkginfo_replace.
+*Cleanup code.
 
 20200618
-*Fix bug in set_pkginfo_replace
-*Fix typo PORTSIR->PORTSDIR in parse_moved
+*Fix bug in set_pkginfo_replace.
+*Fix typo PORTSIR->PORTSDIR in parse_moved.
 
 20200602
-*Fix bug check package's dependencies
+*Fix bug check package's dependencies.
 
 20200522
-*Fix bugs for origin and path
-*Cleanup code
-*Support FLAVORS 'origin@flavor'
-  See pkg_replace(1)
+*Fix bugs for origin and path.
+*Cleanup code.
+*Support FLAVORS 'origin@flavor'. See pkg_replace(1).
 
 20200504
-* Support OVERLAYS
+* Support OVERLAYS.
 
 20200309
-* Support FLAVOR
-  If you want to change flavor to foo, you set option '-m FLAVOR=foo'.
+* Support FLAVOR.
+  If you want to change flavor to foo, you set option "-m FLAVOR=foo".
 
 20191220
-* Fix PKGREPOSITORY path
+* Fix PKGREPOSITORY path.
 
 20191018
-* Fix parse_moved bug
+* Fix parse_moved bug.
 
 20190827
-* Cleanup code
-* Preserve library symlinks
+* Cleanup code.
+* Preserve library symlinks.
 
 20190425
-* Cleanup code
-* Speed up version checking by parallelization
+* Cleanup code.
+* Speed up version checking by parallelization.
 
 20181024:
-* Cleanup code
+* Cleanup code.
 
 20180927:
-* Add ChangeLog
+* Add ChangeLog.
 
 20180611:
-* Fix -C (make forceconfig) option bug
+* Fix -C (make forceconfig) option bug.
 
 20180418:
-* Cleanup code
-* Speed up and strictly check package's dependencies
+* Cleanup code.
+* Speed up and strictly check package's dependencies.
 
 20180314:
-* Support pkgng only
-* Clean up code
+* Support pkgng only.
+* Clean up code.
 
 20170517:
-* Add --automatic option. This option sets automatic flag for the package.
-* Delete --noindex option, add --index option. When pkg_replace checks the
-  dependencies before building the target packages,
-  do "make package-depends-list" as default.
-  This is more strictly checking the dependencies.
+* Add "--automatic" option. This option sets automatic flag for the package.
+* Delete "--noindex" option, add "--index" option. When pkg_replace checks
+ the dependencies before building the target packages, do
+ `make package-depends-list` as default.
+ This is more strictly checking the dependencies.

@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230118
+PKG_REPLACE_VERSION=20230119
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -31,7 +31,7 @@ usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuvVwW] [--automatic]
                 [--debug] [--force-config] [--noclean] [--nocleanup]
                 [--nocleandeps] [--noconfig] [--version]
                 [-j jobs] [-l file] [-L log-prefix]
-                [-m make_args] [-M make_env] [-x pkgname]
+                [-m make_args] [-M make_env] [-U pkgname] [-x pkgname]
                 [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -79,6 +79,7 @@ init_options() {
 	opt_force_config=0
 	opt_force=0
 	opt_fetch=0
+	opt_unlock=
 	opt_interactive=0
 	opt_build=0
 	opt_keep_going=0
@@ -133,13 +134,14 @@ init_variables() {
 	set_signal_exit=
 	optind=1
 	log_file=
-	log_format="+:done -:ignored *:skipped !:failed"
+	log_format="+:done -:ignored *:skipped !:failed #:locked"
 	log_length=0
 	log_summary=
 	cnt_done=
 	cnt_ignored=
 	cnt_skipped=
 	cnt_failed=
+	cnt_locked=
 	err=
 	result=
 	install_pkgs=
@@ -152,6 +154,7 @@ init_variables() {
 	pkg_portdir=
 	pkg_binary=
 	pkg_flavor=
+	pkg_unlock=0
 }
 
 init_pkgtools() {
@@ -163,9 +166,11 @@ init_pkgtools() {
 	PKG_CREATE="${PKG_BIN} create"
 	PKG_DELETE="${PKG_BIN} delete"
 	PKG_INFO="${PKG_BIN} info"
+	PKG_LOCK="${PKG_BIN} lock"
 	PKG_QUERY="${PKG_BIN} query"
 	PKG_RQUERY="${PKG_BIN} rquery"
 	PKG_SET="${PKG_BIN} set"
+	PKG_UNLOCK="${PKG_BIN} unlock"
 }
 
 parse_options() {
@@ -202,7 +207,7 @@ parse_options() {
 		esac
 	done
 
-	while getopts abBcCdfFhiIJj:kl:L:m:M:nNOpPrRuvVwWx: X; do
+	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRuU:vVwWx: X; do
 		case $X in
 		a)	opt_all=1 ;;
 		b)	opt_keep_backup=1 ;;
@@ -229,6 +234,7 @@ parse_options() {
 		r)	opt_required_by=1 ;;
 		R)	opt_depends=$((opt_depends+1)) ;;
 		u)	opt_preserve_libs=0 ;;
+		U)	opt_unlock="${opt_unlock} ${OPTARG}" ;;
 		v)	opt_verbose=1 ;;
 		V)	opt_version=1 ;;
 		w)	opt_beforeclean=0 ;;
@@ -638,6 +644,15 @@ get_binary_flavor(){
 get_depend_binary_pkgnames() {
 	${PKG_QUERY} -F $1 '%dn-%dv:%do' || return 1
 	return 0
+}
+
+get_lock() {
+	local lock
+	lock=$(${PKG_QUERY} '%k' $1) || return 1
+	case ${lock} in
+	0) return 1 ;;
+	1) return 0 ;;
+	esac
 }
 
 pkg_sort() {
@@ -1089,6 +1104,8 @@ show_result() {
 			istrue ${cnt_failed} || continue ;;
 		skipped)
 			istrue ${cnt_skipped} || continue ;;
+		locked)
+			istrue ${cnt_locked} || continue ;;
 		*)	istrue ${opt_verbose} || continue ;;
 		esac
 		mask="${mask}${X%%:*}"
@@ -1181,6 +1198,7 @@ set_pkginfo_replace() {
 	pkg_origin=$(get_origin_from_pkgname ${pkg_name})
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 	pkg_binary=
+	pkg_unlock=0
 
 	isempty ${pkg_flavor} &&
 		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor)
@@ -1232,6 +1250,21 @@ set_pkginfo_replace() {
 			break ;;
 		esac
 	done
+
+	if get_lock ${pkg_name}; then
+		if istrue ${opt_unlock}; then
+			for X in ${opt_unlock}; do
+				case " ${pkg_name} ${pkg_name%-*} " in
+				*\ ${X}\ *)
+					pkg_unlock=1
+					break ;;
+				esac
+			done
+		else
+			pkg_unlock=0
+			err="locked"
+		fi
+	fi
 
 	if isempty ${pkg_binary}; then
 		if isempty ${pkg_origin}; then
@@ -1373,7 +1406,7 @@ do_install() {
 
 do_replace_config() {
 	err=; result=
-	local cur_pkgname
+	local cur_pkgname X
 
 	cur_pkgname=$1
 	pkg_flavor=
@@ -1383,6 +1416,16 @@ do_replace_config() {
 		result="skipped"
 		return 0
 	}
+
+	if get_lock ${cur_pkgname}; then
+		if istrue ${pkg_unlock}; then
+			info "${cur_pkgname} will be unlockd."
+		else
+			info "Skipping '${cur_pkgname}'${err:+ - ${err}}"
+			result="locked"
+			return 0
+		fi
+	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
@@ -1435,6 +1478,16 @@ do_replace() {
 		result="skipped"
 		return 0
 	}
+
+	if get_lock ${cur_pkgname}; then
+		if istrue ${pkg_unlock}; then
+			info "'${cur_pkgname}' is unlocked."
+		else
+			info "Skipping '$1'${err:+ - ${err}}"
+			result="locked"
+			return 0
+		fi
+	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
@@ -1511,6 +1564,9 @@ do_replace() {
 		return 1
 	fi
 
+	istrue ${pkg_lock} &&
+		{ ${PKG_UNLOCK} -q ${cur_pkgname} || warn "Failed unlocked '${cur_pkgname}'"; }
+
 	if deinstall_package "${cur_pkgname}"; then
 		if {
 			case ${pkg_binary} in
@@ -1561,7 +1617,8 @@ do_version() {
 
 	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1" >&2
 
-	if set_pkginfo_replace $1; then
+	if set_pkginfo_replace "$1"; then
+		get_lock "${pkg_name}" && pkg_name=; : ${err:=lock}
 		case ${pkg_name} in
 		"$1")	return 0 ;;
 		esac

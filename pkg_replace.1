@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January 18, 2023)"
-.Dd January 18, 2023
+.\" Modified by Ken DEGUCHI (January 19, 2023)"
+.Dd January 19, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -27,6 +27,7 @@
 .Op Fl L Ar prefix
 .Op Fl m Ar make_args
 .Op Fl M Ar make_env
+.Op Fl U Ar pkgname
 .Op Fl x Ar pkgname
 .Oo
 .Op Ar pkgname\fR[=\fIpackage\fR]
@@ -194,6 +195,9 @@ Never use the port even if a package is not available either locally or remotely
 .It Fl r
 In addition to the specified packages,
 replace all packages that depend on those packages as well.
+.Pp
+.It Fl U
+Unlock packages matching the specified glob pattern before deinstall packages.
 .Pp
 .It Fl u
 Do not preserve old shared libraries.
