@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230119
+PKG_REPLACE_VERSION=20230124
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1135,7 +1135,7 @@ write_result() {
 }
 
 set_signal_handlers() {
-	trap "warn Interrupted.; ${set_signal_int:+${set_signal_int};} exit 1" 1 2 3 15
+	trap "warn Interrupted.; ${set_signal_int:+${set_signal_int};} exit 1" 1 2 3 9 15
 	trap "${set_signal_exit:--}" 0
 }
 
@@ -1425,7 +1425,7 @@ do_replace_config() {
 		if istrue ${pkg_unlock}; then
 			info "${cur_pkgname} will be unlockd."
 		else
-			info "Skipping '${cur_pkgname}'${err:+ - ${err}}"
+			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
 			result="locked"
 			return 0
 		fi
@@ -1487,7 +1487,7 @@ do_replace() {
 		if istrue ${pkg_unlock}; then
 			info "'${cur_pkgname}' is unlocked."
 		else
-			info "Skipping '$1'${err:+ - ${err}}"
+			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
 			result="locked"
 			return 0
 		fi
@@ -1664,10 +1664,11 @@ main() {
 	fi
 
 	[ ${opt_depends} -ge 2 ] && {
-		info "'-dd' or '-RR' option set, this mode is slow!";
-		{ istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"; };
-		{ create_dir "${PKG_REPLACE_DB_DIR}" &&
-			set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '; }
+		info "'-dd' or '-RR' option set, this mode is slow!"
+		istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"
+		create_dir "${PKG_REPLACE_DB_DIR}"
+		set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '
+		set_signal_handlers
 	}
 
 	parse_args ${1+"$@"}
@@ -1722,7 +1723,7 @@ main() {
 		create_tmpdir && init_result || exit 1
 
 		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir'
+		set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir; '
 		set_signal_handlers
 
 		# check installed package
