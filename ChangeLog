@@ -1,6 +1,7 @@
 20230124
 *Fix trap action.
 *Fix message about locked packages.
+*Cleanup code.
 
 20230119
 *Enabled to handle locked packages with new "-U" option.

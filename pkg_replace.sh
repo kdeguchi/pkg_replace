@@ -834,9 +834,10 @@ install_pkg_binary() {
 	info "Installing '$1'"
 	istrue ${opt_force} && install_args="-f"
 	xtry ${PKG_ADD} ${install_args} "$1" || return 1
-	pkgname=${1##*/}
-	pkgname=${pkgname%${PKG_BINARY_SUFX}}
-	istrue ${pkg_unlock} && ${PKG_LOCK} -y "${pkgname}"
+	istrue ${pkg_unlock} && {
+		pkgname=${1##*/}; pkgname=${pkgname%${PKG_BINARY_SUFX}}
+		${PKG_LOCK} -y "${pkgname}" || return 1
+	}
 	run_config_script 'AFTERINSTALL'
 }
 
