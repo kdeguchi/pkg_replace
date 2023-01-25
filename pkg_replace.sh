@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230124
+PKG_REPLACE_VERSION=20230125
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1017,7 +1017,7 @@ clean_libs() {
 		fi
 	done
 	if ! isempty ${del_files}; then
-		try rm -f "${del_files}" || return 1
+		try rm -f ${del_files} || return 1
 	fi
 }
 
@@ -1331,10 +1331,7 @@ do_install() {
 	err=; result=
 	local cur_pkgname pkg
 
-	case "$1" in
-	*/*@*)	pkg_flavor="${1##*@}"; pkg=${1%@*} ;;
-	*)	pkg_flavor=; pkg="$1" ;;
-	esac
+	pkg=${1}
 
 	set_pkginfo_install ${pkg} || {
 		warn "Skipping '$pkg'${err:+ - ${err}}."
@@ -1574,7 +1571,7 @@ do_replace() {
 		cur_origin=$(get_origin_from_pkgname ${cur_pkgname})
 	}; then
 		err="backup error"
-		try rm -rf "${pkg_tmpdir}"
+		remove_dir "${pkg_tmpdir}"
 		return 1
 	fi
 
@@ -1606,7 +1603,7 @@ do_replace() {
 		warn "Failed to keep the old version."
 	clean_libs ||
 		warn "Failed to remove the preserved shared libraries."
-	try rm -rf "${pkg_tmpdir}" ||
+	remove_dir "${pkg_tmpdir}" ||
 		warn "Couldn't remove the working direcotry."
 
 	case ${result} in
