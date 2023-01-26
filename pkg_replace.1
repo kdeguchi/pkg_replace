@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January 25, 2023)"
-.Dd January 25, 2023
+.\" Modified by Ken DEGUCHI (January 27, 2023)"
+.Dd January 27, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -196,7 +196,7 @@ Never use the port even if a package is not available either locally or remotely
 In addition to the specified packages,
 replace all packages that depend on those packages as well.
 .Pp
-.It Fl U
+.It Fl U Ar GLOB
 Unlock packages matching the specified glob pattern before deinstall packages.
 .Pp
 .It Fl u
@@ -226,7 +226,7 @@ Do not
 .Dq Li make clean
 after each installation.
 .Pp
-.It Fl x
+.It Fl x Ar GLOB
 Do not replace packages matching the specified glob pattern.
 .Pp
 .El
