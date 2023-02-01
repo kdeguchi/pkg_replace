@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230127
+PKG_REPLACE_VERSION=20230201
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -596,8 +596,8 @@ get_strict_depend_pkgnames() {
 	dels=$(echo ${dels} | tr ' ' '\n' | sort -u)
 
 	for pkg in ${deps}; do
-		case ' '${dels}' ' in
-		*\ ${pkg}\ *)	continue ;;
+		case " ${dels} " in
+		*[[:space:]]${pkg}[[:space:]]*)	continue ;;
 		*)	cut_deps=${cut_deps}' '${pkg} ;;
 		esac
 	done
@@ -680,7 +680,7 @@ pkg_sort() {
 	dep_list=
 	for pkg in ${sorted_dep_list}; do
 		case " ${dep_list} " in
-		*\ ${pkg}\ *)	continue ;;
+		*[[:space:]]${pkg}[[:space:]]*)	continue ;;
 		*)	dep_list="${dep_list}${pkg} " ;;
 		esac
 	done
@@ -692,7 +692,7 @@ pkg_sort() {
 		dep_list=
 		for pkg in ${sorted_dep_list}; do
 			case " ${pkgs} " in
-			*\ ${pkg}\ *)	dep_list="${dep_list}${pkg} " ;;
+			*[[:space:]]${pkg}[[:space:]]*)	dep_list="${dep_list}${pkg} " ;;
 			*)	continue ;;
 			esac
 		done
@@ -1260,7 +1260,7 @@ set_pkginfo_replace() {
 		if istrue ${opt_unlock}; then
 			for X in ${opt_unlock}; do
 				case " ${pkg_name} ${pkg_name%-*} " in
-				*\ ${X}\ *)
+				*[[:space:]]${X}[[:space:]]*)
 					pkg_unlock=1
 					break ;;
 				esac
@@ -1465,7 +1465,7 @@ do_replace() {
 	if ! isempty "${failed_pkgs}" && ! istrue ${opt_keep_going}; then
 		for X in $(get_depend_pkgnames "$1"); do
 			case " ${failed_pkgs} " in
-			*\ ${X%-*}\ *)
+			*[[:space:]]${X%-*}[[:space:]]*)
 				info "Skipping '$1' because a requisite package '$X' failed"
 				result="skipped"
 				return 0 ;;
