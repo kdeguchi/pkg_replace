@@ -9,6 +9,7 @@
 
 20230125
 *Cleanup code.
+*Fix variable that should not be enclosed in double quotes.
 
 20230124
 *Fix trap action.
