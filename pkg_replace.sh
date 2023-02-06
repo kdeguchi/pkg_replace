@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230202
+PKG_REPLACE_VERSION=20230206
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -297,7 +297,7 @@ parse_args() {
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
 			if istrue ${opt_required_by}; then
-				upgrade_pkgs="${upgrade_pkgs} $(get_require_pkgnames ${installed_pkg})"
+				upgrade_pkgs="${upgrade_pkgs} $(${PKG_QUERY} '%rn-%rv' ${installed_pkg} | sort -u)"
 			fi
 			for p in ${installed_pkg}; do
 				replace_pkgs="${replace_pkgs}${pkg:+ ${p}=${pkg}}"
@@ -621,27 +621,26 @@ get_strict_depend_pkgs(){
 	fi
 }
 
-get_require_pkgnames() {
-	${PKG_QUERY} '%rn-%rv' $1 | sort -u || return 1
-	return 0
-}
-
 get_binary_pkgname() {
+	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
 	${PKG_QUERY} -F $1 '%n-%v' || return 1
 	return 0
 }
 
 get_binary_origin() {
+	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
 	${PKG_QUERY} -F $1 '%o' || return 1
 	return 0
 }
 
 get_binary_flavor(){
+	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
 	${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2
 	return 0
 }
 
 get_depend_binary_pkgnames() {
+	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
 	${PKG_QUERY} -F $1 '%dn-%dv:%do' || return 1
 	return 0
 }
