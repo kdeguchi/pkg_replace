@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230206
+PKG_REPLACE_VERSION=20230228
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -70,39 +70,39 @@ prompt_yesno() {
 }
 
 init_options() {
+	opt_afterclean=1
 	opt_all=0
 	opt_automatic=0
 	opt_backup=1
 	opt_batch=0
-	opt_keep_backup=0
+	opt_beforeclean=0
+	opt_build=0
+	opt_cleandeps=1
 	opt_config=0
+	opt_depends=0
+	opt_exclude=
 	opt_force_config=0
 	opt_force=0
 	opt_fetch=0
-	opt_unlock=
 	opt_interactive=0
-	opt_build=0
+	opt_keep_backup=0
 	opt_keep_going=0
-	opt_result=
 	opt_log_prefix=
 	opt_make_args=
 	opt_make_env=
 	opt_maxjobs=$(sysctl -n hw.ncpu)
-	opt_noexecute=0
 	opt_new=0
-	opt_package=0
-	opt_use_packages=0
-	opt_omit_check=0
 	opt_noconf=0
-	opt_depends=0
-	opt_required_by=0
+	opt_noexecute=0
+	opt_omit_check=0
+	opt_package=0
 	opt_preserve_libs=1
+	opt_required_by=0
+	opt_result=
 	opt_verbose=0
 	opt_version=0
-	opt_beforeclean=0
-	opt_afterclean=1
-	opt_cleandeps=1
-	opt_exclude=
+	opt_unlock=
+	opt_use_packages=0
 	do_upgrade=0
 	do_logging=
 	MAKE_ARGS=
@@ -246,9 +246,8 @@ parse_options() {
 
 	istrue ${opt_batch} && opt_config=0
 	istrue ${opt_batch} && opt_force_config=0
-	#istrue ${opt_depends} && opt_omit_check=0
 	istrue ${opt_force_config} && opt_config=0
-	istrue ${opt_omit_check} && opt_keep_going=1
+	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 
 	optind=$((OPTIND+long_optind))
 
