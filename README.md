@@ -3,6 +3,8 @@ pkg_replace is used to upgrade installed packages for FreeBSD.
 It is compatible with portupgrade and can be used as
 an alternative to portupgrade and portmaster.
 
+https://github.com/kdeguchi/pkg_replace/wiki/pkg_replace-manual
+
 ## License
 
 These codes are licensed under CC0.
