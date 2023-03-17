@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230228
+PKG_REPLACE_VERSION=20230317
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -770,7 +770,7 @@ build_package() {
 	build_args=
 
 	if istrue ${opt_fetch}; then
-		build_args="-DBATCH checksum"
+		build_args="checksum"
 		info "Fetching '$1'"
 	else
 		istrue ${opt_package} && build_args="DEPENDS_TARGET=install"

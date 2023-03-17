@@ -1,3 +1,6 @@
+20230317
+*Fix bug for fetch files (`make -DBATCH checksum` error).
+
 20230228
 *Cleanup code.
 
