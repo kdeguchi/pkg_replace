@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230317
+PKG_REPLACE_VERSION=20230320
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1156,12 +1156,12 @@ set_pkginfo_install() {
 		*@*)	pkg_flavor=${1##*@}; pkg_origin="${1%@*}"; pkg_portdir="${1%@*}" ;;
 		*)	pkg_flavor=; pkg_origin="$1"; pkg_portdir="$1" ;;
 		esac
-		if pkg_portdir=$(get_portdir_from_origin "$1"); then
+		if pkg_portdir=$(get_portdir_from_origin "${pkg_origin}"); then
 			# match origin
-			pkg_origin=$1
-		elif [ -e "${1}/Makefile" ]; then
+			pkg_origin=${pkg_origin}
+		elif [ -e "${pkg_portdir}/Makefile" ]; then
 			# match portdir
-			pkg_portdir=$(expand_path "$1")
+			pkg_portdir=$(expand_path "${pkg_portdir}")
 			pkg_portdir=${pkg_portdir%/}
 			get_pkgname_from_portdir "${pkg_portdir}" 2>&1 > /dev/null ||
 				{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
@@ -1219,12 +1219,12 @@ set_pkginfo_replace() {
 				*@*)	pkg_flavor=${X##*@}; pkg_origin="${X%@*}"; pkg_portdir="${X%@*}" ;;
 				*)	pkg_flavor=; pkg_origin="$X"; pkg_portdir="$X" ;;
 				esac
-				if pkg_portdir=$(get_portdir_from_origin "$X"); then
+				if pkg_portdir=$(get_portdir_from_origin "${pkg_origin}"); then
 					# origin
-					pkg_origin=$X
-				elif [ -e "${X}/Makefile" ]; then
+					pkg_origin=${pkg_origin}
+				elif [ -e "${pkg_portdir}/Makefile" ]; then
 					# portdir
-					pkg_portdir=$(expand_path "$X")
+					pkg_portdir=$(expand_path "${pkg_portdir}")
 					pkg_portdir="${pkg_portdir%/}"
 					get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
 						{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
