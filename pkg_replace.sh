@@ -1230,7 +1230,7 @@ set_pkginfo_replace() {
 				if get_portdir_from_origin "${pkg_origin}" 2>&1 > /dev/null; then
 					# origin
 					pkg_origin=${pkg_origin}
-				elif get_pkgname_from_portdir "${pkg_portdir}" 2>&1 /dev/null; then
+				elif get_pkgname_from_portdir "${pkg_portdir}" 2>&1 > /dev/null; then
 					# portdir
 					pkg_portdir=$(expand_path "${pkg_portdir}")
 					pkg_portdir="${pkg_portdir%/}"
