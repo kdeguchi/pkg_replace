@@ -742,12 +742,7 @@ remove_dir() {
 
 expand_path() {
 	case "$1" in
-	[!/]*)
-		if cd ${1} 2>&1 > /dev/null; then
-			pwd
-		else
-			echo "${PWD:-`pwd`}/${1#./}"
-		fi ;;
+	[!/]*)	cd ${1} 2>&1 > /dev/null && pwd || return 1;;
 	*)	echo $1 ;;
 	esac
 }
