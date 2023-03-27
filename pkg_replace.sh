@@ -1213,6 +1213,14 @@ set_pkginfo_replace() {
 			X=${X#*=} # get information after '='
 			case ${X} in
 			*${PKG_BINARY_SUFX})	pkg_binary="${X}"; break ;;
+			.|./)
+				# match relative path '.'
+				pkg_portdir=$(expand_path "${X}/")
+				pkg_portdir=${pkg_portdir%/}
+				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
+				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
+				;;
 			*/*@*|*/*)
 				# match origin@flavor, origin or portdir
 				case $X in
@@ -1233,14 +1241,6 @@ set_pkginfo_replace() {
 					warn "'$X' not found."
 					return 1
 				fi ;;
-			.|./)
-				# match relative path '.'
-				pkg_portdir=$(expand_path "${X}/")
-				pkg_portdir=${pkg_portdir%/}
-				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
-					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
-				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
-				;;
 			*)
 				#match other
 				pkg_portdir=$(expand_path "$X")
