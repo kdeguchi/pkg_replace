@@ -742,7 +742,7 @@ remove_dir() {
 
 expand_path() {
 	case "$1" in
-	[!/]*)	cd ${1} && pwd || warn "'${1}' is not found!"; return 1;;
+		[!/]*)	cd $(pwd)/${1} && pwd || warn "'${1}' is not found!"; return 1;;
 	*)	echo $1 ;;
 	esac
 }
