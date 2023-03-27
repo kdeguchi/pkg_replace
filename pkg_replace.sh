@@ -508,7 +508,7 @@ get_pkgname_from_portdir() {
 	local pkgname
 	[ -d "$1" ] || return 1
 	load_make_vars
-	{ cd "$1" && pkgname=$(${PKG_MAKE} -V PKGNAME); } || return 1
+	pkgname=$( cd "$1" && ${PKG_MAKE} -V PKGNAME ) || return 1
 	case ${pkgname} in
 	''|-)	return 1 ;;
 	*)	echo ${pkgname}; return 0 ;;
@@ -742,7 +742,14 @@ remove_dir() {
 
 expand_path() {
 	case "$1" in
-		[!/]*)	cd $(pwd)/${1} && pwd || warn "'${1}' is not found!"; return 1;;
+	[!/]*)
+		if [ -d "$1" ]; then
+			echo $( cd "$1" && pwd ) && return 0
+		elif [ -e "$1" ]; then
+			echo $( cd $(dirname "$1") && echo $(pwd)/$(basename "$1") ) && return 0
+		else
+			warn "'$1' is not found!"; return 1
+		fi ;;
 	*)	echo $1 ;;
 	esac
 }
