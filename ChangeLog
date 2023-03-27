@@ -1,3 +1,6 @@
+20230327
+*Fix handling relative path in set_pkginfo_replace().
+
 20230320
 *Fix handling path bugs in set_pkginfo_install() and set_pkginfo_replace().
 

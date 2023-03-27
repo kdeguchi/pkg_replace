@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230320
+PKG_REPLACE_VERSION=20230327
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1233,7 +1233,7 @@ set_pkginfo_replace() {
 					warn "'$X' not found."
 					return 1
 				fi ;;
-			.)
+			.|./)
 				# match relative path '.'
 				pkg_portdir=$(expand_path "${X}/")
 				pkg_portdir=${pkg_portdir%/}
