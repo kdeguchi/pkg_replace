@@ -1227,7 +1227,7 @@ set_pkginfo_replace() {
 				*@*)	pkg_flavor=${X##*@}; pkg_origin="${X%@*}"; pkg_portdir=$(expand_path "${X%@*}") ;;
 				*)	pkg_flavor=; pkg_origin="$X"; pkg_portdir=$(expand_path "$X") ;;
 				esac
-				if pkg_portdir=$(get_portdir_from_origin "${pkg_origin}"); then
+				if get_portdir_from_origin "${pkg_origin}") 2>&1 > /dev/null then
 					# origin
 					pkg_origin=${pkg_origin}
 				elif get_pkgname_from_portdir "${pkg_portdir}" 2>&1 /dev/null; then
