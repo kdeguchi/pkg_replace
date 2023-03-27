@@ -746,7 +746,7 @@ expand_path() {
 		if [ -d "$1" ]; then
 			echo $( cd "$1" && pwd ) && return 0
 		elif [ -e "$1" ]; then
-			echo $( cd $(dirname "$1") && echo $(pwd)/$(basename "$1") ) && return 0
+			echo $( cd $( dirname "$1" ) && pwd )/$( basename "$1" ) && return 0
 		else
 			warn "'$1' is not found!"; return 1
 		fi ;;
