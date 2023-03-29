@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230327
+PKG_REPLACE_VERSION=20230329
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -31,7 +31,8 @@ usage() {
 	        [--debug] [--force-config] [--noclean] [--nocleanup]
 	        [--nocleandeps] [--noconfig] [--version]
 	        [-j jobs] [-l file] [-L log-prefix]
-	        [-m make_args] [-M make_env] [-U pkgname] [-x pkgname]
+	        [-m make_args] [-M make_env] [-t make_target]
+	        [-U pkgname] [-x pkgname]
 	        [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -99,6 +100,7 @@ init_options() {
 	opt_preserve_libs=1
 	opt_required_by=0
 	opt_result=
+	opt_target=
 	opt_verbose=0
 	opt_version=0
 	opt_unlock=
@@ -207,7 +209,7 @@ parse_options() {
 		esac
 	done
 
-	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRuU:vVwWx: X; do
+	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRt:uU:vVwWx: X; do
 		case $X in
 		a)	opt_all=1 ;;
 		b)	opt_keep_backup=1 ;;
@@ -233,6 +235,7 @@ parse_options() {
 		P)	opt_use_packages=$((opt_use_packages+1)) ;;
 		r)	opt_required_by=1 ;;
 		R)	opt_depends=$((opt_depends+1)) ;;
+		t)	opt_target="${opt_target} ${OPTARG}" ;;
 		u)	opt_preserve_libs=0 ;;
 		U)	opt_unlock="${opt_unlock} ${OPTARG}" ;;
 		v)	opt_verbose=1 ;;
@@ -779,6 +782,9 @@ build_package() {
 	if istrue ${opt_fetch}; then
 		build_args="checksum"
 		info "Fetching '$1'"
+	elif ! isempty ${opt_target}; then
+		build_args="${opt_target}"
+		info "Do 'make${opt_target}' '$1'"
 	else
 		istrue ${opt_package} && build_args="DEPENDS_TARGET=install"
 		istrue ${opt_batch} && build_args="${build_args} -DBATCH"
@@ -1548,7 +1554,7 @@ do_replace() {
 		}
 	fi
 
-	if istrue ${opt_fetch} || istrue ${opt_build}; then
+	if istrue ${opt_fetch} || ! isempty ${opt_target} || istrue ${opt_build}; then
 		result="done"
 		return 0
 	fi

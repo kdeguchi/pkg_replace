@@ -1,3 +1,7 @@
+20230329
+*Add "-t" option.
+ If you use `pkg_replace -t make_target ...`, do only `make make_target`.
+
 20230327
 *Fix handling relative path.
 

@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (March 27, 2023)"
-.Dd March 27, 2023
+.\" Modified by Ken DEGUCHI (March 29, 2023)"
+.Dd March 29, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -28,6 +28,7 @@
 .Op Fl m Ar make_args
 .Op Fl M Ar make_env
 .Op Fl U Ar pkgname
+.Op Fl t Ar make_target
 .Op Fl x Ar pkgname
 .Oo
 .Op Ar pkgname\fR[=\fIpackage\fR]
@@ -196,6 +197,11 @@ Never use the port even if a package is not available either locally or remotely
 In addition to the specified packages,
 replace all packages that depend on those packages as well.
 .Pp
+.It Fl t Ar make_target
+Do
+.Dq Li make make_target
+only.
+.Pp
 .It Fl U Ar GLOB
 Unlock packages matching the specified glob pattern before deinstall packages.
 .Pp
@@ -311,6 +317,12 @@ with
 .Dl pkg_replace -m FLAVOR=py37 graphics/py-cairo
 or
 .Dl pkg_replace graphics/py-cairo@py37
+.It
+Do
+.Dq Li make configure
+only:
+.Pp
+.Ar pkg_replace -t configure pkgname
 .El
 .Sh COMPATIBILITY
 The
