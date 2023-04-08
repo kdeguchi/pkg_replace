@@ -1,3 +1,6 @@
+20230408
+*Fix "-t" option bug in do_install().
+
 20230329
 *Add "-t" option.
  If you use `pkg_replace -t make_target ...`, do only `make make_target`.

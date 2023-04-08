@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230329
+PKG_REPLACE_VERSION=20230408
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1397,7 +1397,7 @@ do_install() {
 		}
 	fi
 
-	if istrue ${opt_fetch} || istrue ${opt_build}; then
+	if istrue ${opt_fetch} || ! isempty ${opt_target} || istrue ${opt_build}; then
 		result="done"
 		return 0
 	fi
