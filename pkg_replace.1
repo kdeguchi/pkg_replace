@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (April  8, 2023)"
-.Dd April  8, 2023
+.\" Modified by Ken DEGUCHI (April 18, 2023)"
+.Dd April 18, 2023
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -9,7 +9,7 @@
 .Nd a utility for upgrading installed packages
 .Sh SYNOPSIS
 .Nm
-.Op Fl habBcCddfFiJknNOpPPqrRRuvVwW
+.Op Fl habBcCddfFiJknNOpPPqrRRuUvVwW
 .Op Fl \-automatic
 .Op Fl \-batch
 .Op Fl \-clean
@@ -27,7 +27,6 @@
 .Op Fl L Ar prefix
 .Op Fl m Ar make_args
 .Op Fl M Ar make_env
-.Op Fl U Ar pkgname
 .Op Fl t Ar make_target
 .Op Fl x Ar pkgname
 .Oo
@@ -202,8 +201,8 @@ Do
 .Dq Li make make_target
 only.
 .Pp
-.It Fl U Ar GLOB
-Unlock packages matching the specified glob pattern before deinstall packages.
+.It Fl U
+Unlock packages before deinstall packages and lock packages again after install.
 .Pp
 .It Fl u
 Do not preserve old shared libraries.

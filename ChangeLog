@@ -1,3 +1,8 @@
+20230418
+*Changed the behavior of "-U" option.
+ If you use "-U" option, pkg_replace unlock packages before deinstall packages
+ and lock packages again after install.
+
 20230408
 *Fix "-t" option bug in do_install().
 

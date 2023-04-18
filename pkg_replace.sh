@@ -21,18 +21,17 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230408
+PKG_REPLACE_VERSION=20230418
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
 	cat <<-EOF
-	usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuvVwW] [--automatic]
+	usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuUvVwW] [--automatic]
 	        [--batch] [--clean] [--cleanup] [--config]
 	        [--debug] [--force-config] [--noclean] [--nocleanup]
 	        [--nocleandeps] [--noconfig] [--version]
 	        [-j jobs] [-l file] [-L log-prefix]
-	        [-m make_args] [-M make_env] [-t make_target]
-	        [-U pkgname] [-x pkgname]
+	        [-m make_args] [-M make_env] [-t make_target] [-x pkgname]
 	        [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -103,7 +102,7 @@ init_options() {
 	opt_target=
 	opt_verbose=0
 	opt_version=0
-	opt_unlock=
+	opt_unlock=0
 	opt_use_packages=0
 	do_upgrade=0
 	do_logging=
@@ -209,7 +208,7 @@ parse_options() {
 		esac
 	done
 
-	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRt:uU:vVwWx: X; do
+	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRt:uUvVwWx: X; do
 		case $X in
 		a)	opt_all=1 ;;
 		b)	opt_keep_backup=1 ;;
@@ -237,7 +236,7 @@ parse_options() {
 		R)	opt_depends=$((opt_depends+1)) ;;
 		t)	opt_target="${opt_target} ${OPTARG}" ;;
 		u)	opt_preserve_libs=0 ;;
-		U)	opt_unlock="${opt_unlock} ${OPTARG}" ;;
+		U)	opt_unlock=1 ;;
 		v)	opt_verbose=1 ;;
 		V)	opt_version=1 ;;
 		w)	opt_beforeclean=0 ;;
@@ -863,6 +862,7 @@ install_package() {
 
 	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
+	istrue ${pkg_unlock} && ${PKG_LOCK} -y $(get_pkgname_from_portdir $1)
 	if istrue ${opt_afterclean}; then
 		clean_package $1
 	fi
@@ -1267,20 +1267,7 @@ set_pkginfo_replace() {
 		esac
 	done
 
-	if get_lock ${pkg_name}; then
-		if istrue ${opt_unlock}; then
-			for X in ${opt_unlock}; do
-				case " ${pkg_name} ${pkg_name%-*} " in
-				*[[:space:]]${X}[[:space:]]*)
-					pkg_unlock=1
-					break ;;
-				esac
-			done
-		else
-			pkg_unlock=0
-			err="locked"
-		fi
-	fi
+	get_lock ${pkg_name} && ! istrue ${opt_unlock} && err="locked"
 
 	if isempty ${pkg_binary}; then
 		if isempty ${pkg_origin}; then
@@ -1431,7 +1418,7 @@ do_replace_config() {
 	}
 
 	if get_lock ${cur_pkgname}; then
-		if istrue ${pkg_unlock}; then
+		if istrue ${opt_unlock}; then
 			info "${cur_pkgname} will be unlockd."
 		else
 			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
@@ -1493,11 +1480,13 @@ do_replace() {
 	}
 
 	if get_lock ${cur_pkgname}; then
-		if istrue ${pkg_unlock}; then
+		if istrue ${opt_unlock}; then
 			info "'${cur_pkgname}' is unlocked."
+			pkg_unlock=1
 		else
 			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
 			result="locked"
+			pkg_unlock=0
 			return 0
 		fi
 	fi
@@ -1565,12 +1554,14 @@ do_replace() {
 		info "Found a package of '$1': ${old_pkg}" ||
 			old_pkg="${pkg_tmpdir}/${cur_pkgname}${PKG_BINARY_SUFX}"
 
-	istrue ${pkg_unlock} &&
+	istrue ${opt_unlock} &&
 		{ ${PKG_UNLOCK} -y ${cur_pkgname}
 			if get_lock ${cur_pkgname}; then
 				warn "Unlock '${cur_pkgname} failed!'"
+				pkg_unlock=0
 			else
 				info "Unlock '${cur_pkgname}'"
+				pkg_unlock=1
 			fi
 		}
 
