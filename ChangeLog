@@ -1,3 +1,6 @@
+20230916
+*Fix bug when FLAVOR is lost.
+
 20230418
 *Changed the behavior of "-U" option.
  If you use "-U" option, pkg_replace unlock packages before deinstall packages
