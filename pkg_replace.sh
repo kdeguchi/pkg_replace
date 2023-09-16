@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230418
+PKG_REPLACE_VERSION=20230916
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1216,9 +1216,6 @@ set_pkginfo_replace() {
 	pkg_binary=
 	pkg_unlock=0
 
-	isempty ${pkg_flavor} &&
-		pkg_flavor=$( ${PKG_ANNOTATE} --quiet --show "$1" flavor)
-
 	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
 		"${X%%=*}")
@@ -1282,6 +1279,15 @@ set_pkginfo_replace() {
 			{ warn "'$1' is not a valid package." ; return 1; }
 		pkg_flavor=$(get_binary_flavor "${pkg_binary}") || return 1
 	fi
+
+	if isempty ${pkg_flavor}; then
+		pkg_flavor=$(${PKG_ANNOTATE} --quiet --show "$1" flavor)
+	fi
+
+	if isempty $(cd ${pkg_portdir} && ${MAKE} -V FLAVORS); then
+		pkg_flavor=
+	fi
+
 }
 
 make_config_conditional() {
