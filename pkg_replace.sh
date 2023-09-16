@@ -1216,6 +1216,10 @@ set_pkginfo_replace() {
 	pkg_binary=
 	pkg_unlock=0
 
+	if isempty ${pkg_flavor}; then
+		pkg_flavor=$(${PKG_ANNOTATE} --quiet --show "$1" flavor)
+	fi
+
 	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
 		"${X%%=*}")
@@ -1278,10 +1282,6 @@ set_pkginfo_replace() {
 		pkg_name=$(get_binary_pkgname "${pkg_binary}") ||
 			{ warn "'$1' is not a valid package." ; return 1; }
 		pkg_flavor=$(get_binary_flavor "${pkg_binary}") || return 1
-	fi
-
-	if isempty ${pkg_flavor}; then
-		pkg_flavor=$(${PKG_ANNOTATE} --quiet --show "$1" flavor)
 	fi
 
 	if isempty $(cd ${pkg_portdir} && ${MAKE} -V FLAVORS); then
