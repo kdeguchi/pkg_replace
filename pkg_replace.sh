@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230916
+PKG_REPLACE_VERSION=20230922
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -288,7 +288,12 @@ parse_args() {
 				warn "No such file or package: ${pkg_portdir}"
 				continue
 			fi
-			ARG=${pkg_origin} ;;
+			if isempty ${pkg_flavor}; then
+				ARG=${pkg_origin}
+			else
+				ARG=${pkg_origin}@${pkg_flavor}
+			fi
+			;;
 		*)	ARG="${ARG}" ;;
 		esac
 

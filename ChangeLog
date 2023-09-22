@@ -1,3 +1,7 @@
+20230922
+*Improved FLAVOR handling when installing new packages.
+ See example section in pkg_replace(1).
+
 20230916
 *Fix bug when FLAVOR is lost.
 
