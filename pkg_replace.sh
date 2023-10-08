@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20230922
+PKG_REPLACE_VERSION=20231008
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1656,6 +1656,8 @@ do_version() {
 
 main() {
 	local ARG ARGV jobs pids cnt X
+
+	isempty $(which pkg-static) && { warn 'pkg not found. Please install the pkg command.'; exit 1; }
 
 	init_variables
 	init_options
