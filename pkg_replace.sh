@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20231008
+PKG_REPLACE_VERSION=20240131
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -135,7 +135,7 @@ init_variables() {
 	set_signal_exit=
 	optind=1
 	log_file=
-	log_format="+:done -:ignored *:skipped !:failed #:locked"
+	log_format="+:done -:ignored *:skipped !:failed #:locked *:subpackage"
 	log_length=0
 	log_summary=
 	cnt_done=
@@ -143,6 +143,7 @@ init_variables() {
 	cnt_skipped=
 	cnt_failed=
 	cnt_locked=
+	cnt_subpackage=
 	err=
 	result=
 	install_pkgs=
@@ -1127,6 +1128,8 @@ show_result() {
 			istrue ${cnt_skipped} || continue ;;
 		locked)
 			istrue ${cnt_locked} || continue ;;
+		subpackage)
+			istrue ${cnt_subpackage} || continue ;;
 		*)	istrue ${opt_verbose} || continue ;;
 		esac
 		mask="${mask}${X%%:*}"
@@ -1274,6 +1277,9 @@ set_pkginfo_replace() {
 	done
 
 	get_lock ${pkg_name} && ! istrue ${opt_unlock} && err="locked"
+
+	[ -z $(${PKG_ANNOTATE} --quiet --show "${pkg_name}" subpackage) ] ||
+		{ err="subpackage" ; return 1; }
 
 	if isempty ${pkg_binary}; then
 		if isempty ${pkg_origin}; then
