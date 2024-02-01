@@ -661,6 +661,11 @@ get_lock() {
 	esac
 }
 
+get_subpackage() {
+	[ -z $(${PKG_ANNOTATE} --show --quiet $1 subpackage) ] && return 1
+	return 0
+}
+
 pkg_sort() {
 	local pkgs pkg cnt dep_list sorted_dep_list
 
@@ -1278,8 +1283,7 @@ set_pkginfo_replace() {
 
 	get_lock ${pkg_name} && ! istrue ${opt_unlock} && err="locked"
 
-	[ -z $(${PKG_ANNOTATE} --quiet --show "${pkg_name}" subpackage) ] ||
-		{ err="subpackage" ; return 1; }
+	get_subpackage ${pkg_name} && err="subpackage"
 
 	if isempty ${pkg_binary}; then
 		if isempty ${pkg_origin}; then
@@ -1444,6 +1448,12 @@ do_replace_config() {
 		fi
 	fi
 
+	if get_subpackage ${cur_pkgname}; then
+		info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
+		result="subpackage"
+		return 0
+	fi
+
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		return 0
@@ -1506,6 +1516,12 @@ do_replace() {
 			pkg_unlock=0
 			return 0
 		fi
+	fi
+
+	if get_subpackage ${cur_pkgname}; then
+		info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
+		result="subpackage"
+		return 0
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
@@ -1651,11 +1667,6 @@ do_version() {
 		has_config 'IGNORE' && err="held"
 	elif isempty "${pkg_name}"; then
 		return 0
-	else
-		case ${err} in
-		subpackage)	pkg_name=; : ${err:=subpackage} ;;
-		skipped)	pkg_name=; : ${err:=skipped} ;;
-		esac
 	fi
 
 	printf "\\r%-$(tput co)s\\r" " " >&2
