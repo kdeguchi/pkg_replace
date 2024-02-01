@@ -1430,8 +1430,7 @@ do_replace_config() {
 
 	set_pkginfo_replace "$1" || {
 		warn "Skipping '$1'${err:+ - ${err}}."
-		result="skipped"
-		[ "${err}" = "subpackage" ] && result="subpackage"
+		result=${err}
 		return 0
 	}
 
@@ -1493,8 +1492,7 @@ do_replace() {
 
 	set_pkginfo_replace "$1" || {
 		warn "Skipping '$1'${err:+ - ${err}}."
-		result="skipped"
-		[ "${err}" = "subpackage" ] && result="subpackage"
+		result=${err}
 		return 0
 	}
 
@@ -1654,11 +1652,10 @@ do_version() {
 	elif isempty "${pkg_name}"; then
 		return 0
 	else
-		if [ "${err}" = "subpackage" ]; then
-			pkg_name=; : ${err:=subpackage}
-		else
-			pkg_name=; : ${err:=skipped}
-		fi
+		case ${err} in
+		subpackage)	pkg_name=; : ${err:=subpackage} ;;
+		skipped)	pkg_name=; : ${err:=skipped} ;;
+		esac
 	fi
 
 	printf "\\r%-$(tput co)s\\r" " " >&2
