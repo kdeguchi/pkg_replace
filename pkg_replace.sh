@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240131
+PKG_REPLACE_VERSION=20240201
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -135,7 +135,7 @@ init_variables() {
 	set_signal_exit=
 	optind=1
 	log_file=
-	log_format="+:done -:ignored *:skipped !:failed #:locked *:subpackage"
+	log_format="+:done -:ignored *:skipped !:failed #:locked %:subpackage"
 	log_length=0
 	log_summary=
 	cnt_done=
@@ -1431,6 +1431,7 @@ do_replace_config() {
 	set_pkginfo_replace "$1" || {
 		warn "Skipping '$1'${err:+ - ${err}}."
 		result="skipped"
+		[ "${err}" = "subpackage" ] && result="subpackage"
 		return 0
 	}
 
@@ -1493,6 +1494,7 @@ do_replace() {
 	set_pkginfo_replace "$1" || {
 		warn "Skipping '$1'${err:+ - ${err}}."
 		result="skipped"
+		[ "${err}" = "subpackage" ] && result="subpackage"
 		return 0
 	}
 
@@ -1652,7 +1654,11 @@ do_version() {
 	elif isempty "${pkg_name}"; then
 		return 0
 	else
-		pkg_name=; : ${err:=skipped}
+		if [ "${err}" = "subpackage" ]; then
+			pkg_name=; : ${err:=subpackage}
+		else
+			pkg_name=; : ${err:=skipped}
+		fi
 	fi
 
 	printf "\\r%-$(tput co)s\\r" " " >&2
