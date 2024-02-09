@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240205
+PKG_REPLACE_VERSION=20240209
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1671,7 +1671,14 @@ do_version() {
 
 	printf "\\r%-$(tput co)s\\r" " " >&2
 
-	echo "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}"
+	case ${err} in
+	subpackage|held)
+		warn "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}"
+		return 0 ;;
+	*)
+		echo "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}" ;;
+	esac
+
 }
 
 main() {
