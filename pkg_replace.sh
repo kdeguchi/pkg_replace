@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240209
+PKG_REPLACE_VERSION=20240217
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -478,7 +478,8 @@ load_make_vars() {
 	get_config 'PKG_MAKE_ARGS' 'MAKE_ARGS'
 	PKG_MAKE_ARGS="${opt_make_args:+${opt_make_args} }${PKG_MAKE_ARGS}"
 	case "${PKG_MAKE_ARGS}" in
-		*FLAVOR=*)	pkg_flavor=${PKG_MAKE_ARGS##*FLAVOR=}; pkg_flavor=${pkg_flavor% *} ;;
+	*FLAVOR=*)
+		pkg_flavor=${PKG_MAKE_ARGS##*FLAVOR=}; pkg_flavor=${pkg_flavor% *} ;;
 	esac
 	! isempty "${pkg_flavor}" && PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}"
 	get_config 'PKG_MAKE_ENV' 'MAKE_ENV'
@@ -619,7 +620,10 @@ get_strict_depend_pkgs(){
 	pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
 	istrue ${opt_cleandeps} || { [ -e "${pkgdeps_file}" ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
-		{ echo >&2; warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."; return 1; }
+		{ echo >&2
+			warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
+			return 1
+		}
 	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
@@ -1238,7 +1242,7 @@ set_pkginfo_replace() {
 		"${X%%=*}")
 			# match pkgname=foo, foo is *.pkg, origin@flavor, origin or portdir.
 			X=${X#*=} # get information after '='
-			case ${X} in
+			case $X in
 			*${PKG_BINARY_SUFX})	pkg_binary="${X}"; break ;;
 			.|./)
 				# match relative path '.'
@@ -1251,8 +1255,11 @@ set_pkginfo_replace() {
 			*/*@*|*/*)
 				# match origin@flavor, origin or portdir
 				case $X in
-				*@*)	pkg_flavor=${X##*@}; pkg_origin="${X%@*}"; pkg_portdir=$(expand_path "${X%@*}") ;;
-				*)	pkg_flavor=; pkg_origin="$X"; pkg_portdir=$(expand_path "$X") ;;
+				*@*)
+					pkg_flavor=${X##*@}; pkg_origin="${X%@*}"
+					pkg_portdir=$(expand_path "${X%@*}") ;;
+				*)
+					pkg_flavor=; pkg_origin="$X"; pkg_portdir=$(expand_path "$X") ;;
 				esac
 				if get_portdir_from_origin "${pkg_origin}" 2>&1 > /dev/null; then
 					# origin
@@ -1684,7 +1691,8 @@ do_version() {
 main() {
 	local ARG ARGV jobs pids cnt X
 
-	isempty $(which pkg-static) && { warn 'pkg not found. Please install the pkg command.'; exit 1; }
+	isempty $(which pkg-static) &&
+		{ warn 'pkg not found. Please install the pkg command.'; exit 1; }
 
 	init_variables
 	init_options
