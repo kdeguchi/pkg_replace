@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240217
+PKG_REPLACE_VERSION=20240303
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -475,14 +475,14 @@ load_config() {
 }
 
 load_make_vars() {
-	get_config 'PKG_MAKE_ARGS' 'MAKE_ARGS'
+	get_config PKG_MAKE_ARGS MAKE_ARGS
 	PKG_MAKE_ARGS="${opt_make_args:+${opt_make_args} }${PKG_MAKE_ARGS}"
 	case "${PKG_MAKE_ARGS}" in
 	*FLAVOR=*)
 		pkg_flavor=${PKG_MAKE_ARGS##*FLAVOR=}; pkg_flavor=${pkg_flavor% *} ;;
 	esac
 	! isempty "${pkg_flavor}" && PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}"
-	get_config 'PKG_MAKE_ENV' 'MAKE_ENV'
+	get_config PKG_MAKE_ENV MAKE_ENV
 	! isempty "${opt_maxjobs}" &&
 		PKG_MAKE_ENV="${PKG_MAKE_ENV} MAKE_JOBS_NUMBER_LIMIT=${opt_maxjobs}"
 	PKG_MAKE_ENV="${opt_make_env:+${opt_make_env} }${PKG_MAKE_ENV}"
@@ -525,9 +525,11 @@ get_pkgname_from_portdir() {
 }
 
 get_overlay_dir() {
-	local overlay pkgname
+	local overlay IFS
+	IFS='	 
+'
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		pkgname=$(get_pkgname_from_portdir ${overlay}/$1) || continue
+		get_pkgname_from_portdir ${overlay}/$1 2>&1 > /dev/null || continue
 		echo ${overlay} && return 0
 	done
 	return 1
