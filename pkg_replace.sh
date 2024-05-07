@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240303
+PKG_REPLACE_VERSION=20240507
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1127,22 +1127,13 @@ set_result() {
 show_result() {
 	local mask descr X
 
+	istrue ${opt_verbose} || return 0
+
 	mask=
 	descr=
 	istrue ${log_length} || return 0
 
 	for X in ${log_format}; do
-		case ${X#*:} in
-		failed)
-			istrue ${cnt_failed} || continue ;;
-		skipped)
-			istrue ${cnt_skipped} || continue ;;
-		locked)
-			istrue ${cnt_locked} || continue ;;
-		subpackage)
-			istrue ${cnt_subpackage} || continue ;;
-		*)	istrue ${opt_verbose} || continue ;;
-		esac
 		mask="${mask}${X%%:*}"
 		descr="${descr:+${descr} / }${X}"
 	done
@@ -1299,7 +1290,7 @@ set_pkginfo_replace() {
 			err="not installed or no origin recorded"
 			return 1
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
-			trace_moved ${pkg_origin} || { err="removed"; return 1; }
+			trace_moved ${pkg_origin} || { err="skipped"; return 1; }
 		fi
 		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") || return 1
 	else
@@ -1328,7 +1319,7 @@ do_install_config() {
 	err=; result=
 
 	set_pkginfo_install "$1" || {
-		warn "Skipping '$1'${err:+ - ${err}}."
+		info "Skipping '$1'${err:+ - ${err}}."
 		result="skipped"
 		return 0
 	}
@@ -1362,7 +1353,7 @@ do_install() {
 	pkg=${1}
 
 	set_pkginfo_install ${pkg} || {
-		warn "Skipping '$pkg'${err:+ - ${err}}."
+		info "Skipping '$pkg'${err:+ - ${err}}."
 		result="skipped"
 		return 0
 	}
@@ -1442,7 +1433,7 @@ do_replace_config() {
 	pkg_flavor=
 
 	set_pkginfo_replace "$1" || {
-		warn "Skipping '$1'${err:+ - ${err}}."
+		info "Skipping '$1'${err:+ - ${err}}."
 		result=${err}
 		return 0
 	}
@@ -1510,7 +1501,7 @@ do_replace() {
 	cur_pkgname=$1
 
 	set_pkginfo_replace "$1" || {
-		warn "Skipping '$1'${err:+ - ${err}}."
+		info "Skipping '$1'${err:+ - ${err}}."
 		result=${err}
 		return 0
 	}
@@ -1681,7 +1672,7 @@ do_version() {
 	printf "\\r%-$(tput co)s\\r" " " >&2
 
 	case ${err} in
-	subpackage|held)
+	held|skipped|subpackage)
 		warn "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}"
 		return 0 ;;
 	*)
