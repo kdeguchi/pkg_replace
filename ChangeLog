@@ -1,3 +1,7 @@
+20240614
+*Remove the old library with the same name as the new library from PKGCOMPATDIR.
+ See https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=268652
+
 20240507
 *Fix handling of removed ports.
 

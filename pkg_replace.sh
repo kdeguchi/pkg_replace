@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240507
+PKG_REPLACE_VERSION=20240514
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -869,7 +869,7 @@ install_pkg_binary() {
 }
 
 install_package() {
-	local install_args
+	local install_args file
 	install_args=
 
 	info "Installing '$1'"
@@ -879,6 +879,23 @@ install_package() {
 
 	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
+
+	! isempty ${preserved_files} && {
+		for file in $(${PKG_QUERY} '%Fp' $(${PKG_MAKE} -V PKGNAME)); do
+			case ${file##*/} in
+			*.so.[0-9]*|*.so)
+				case " ${preserved_files} " in
+				*[[:space:]]${file}[[:space:]]*)
+					istrue ${opt_verbose} &&
+						info "Remove the same name library: '${PKGCOMPATDIR}/${file##*/}'"
+					xtry rm -f ${PKGCOMPATDIR}/${file##*/}
+					;;
+				esac
+				;;
+			esac
+		done
+	}
+
 	istrue ${pkg_unlock} && ${PKG_LOCK} -y $(get_pkgname_from_portdir $1)
 	if istrue ${opt_afterclean}; then
 		clean_package $1

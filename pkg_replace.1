@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (February  9, 2024)"
-.Dd February  9, 2024
+.\" Modified by Ken DEGUCHI (May 14, 2024)"
+.Dd May 14, 2024
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -210,6 +210,8 @@ By default,
 .Nm
 preserves old shared libraries in
 .Va PKGCOMPATDIR .
+But if the new library and the old library have the same name, the old library is removed from
+.Va PKGCOMPATDIR.
 .Pp
 .It Fl v
 Turn on verbose output.
