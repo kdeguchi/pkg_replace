@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240514
+PKG_REPLACE_VERSION=20240516
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -60,7 +60,7 @@ info() {
 }
 
 prompt_yesno() {
-	local X
+	local X=
 	echo -n "${1-OK?} [${2-yes}] " >&2
 	read X <&1
 	case ${X:-${2-yes}} in
@@ -176,10 +176,7 @@ init_pkgtools() {
 }
 
 parse_options() {
-	local long_opts long_optind X
-
-	long_opts=
-	long_optind=0
+	local long_opts= long_optind=0 X=
 
 	for X in ${1+"$@"}; do
 		case $X in
@@ -257,7 +254,7 @@ parse_options() {
 }
 
 parse_args() {
-	local ARG pkg installed_pkg p
+	local ARG= pkg= installed_pkg= p=
 
 	for ARG in ${1+"$@"}; do
 		pkg_flavor=; pkg_portdir=; pkg_origin=; pkg=;
@@ -324,11 +321,9 @@ parse_args() {
 }
 
 parse_config() {
-	local line var val array func X
+	local line=0 var= val= array= func= X=
 
 	[ -r "$1" ] || return 0
-
-	line=0; array=; func=
 
 	while read -r X; do
 		line=$((line+1))
@@ -405,7 +400,7 @@ config_match() {
 }
 
 has_config() {
-	local config X
+	local config= X=
 	eval config=\$$1
 	for X in ${config}; do
 		if config_match "${X%%=*}"; then
@@ -416,8 +411,8 @@ has_config() {
 }
 
 get_config() {
-	local IFS config X
-	IFS='
+	local config= X=
+	local IFS='
 '
 	eval config=\$$2
 	eval $1=
@@ -429,7 +424,7 @@ get_config() {
 }
 
 run_config_script() {
-	local command
+	local command=
 	get_config 'command' "$1" '; '
 	if ! isempty ${command}; then
 		info "Executing the $1 command: ${command}"
@@ -438,8 +433,8 @@ run_config_script() {
 }
 
 run_rc_script() {
-	local files file
-	files=$(${PKG_QUERY} '%Fp' $1)
+	local file=
+	local files=$(${PKG_QUERY} '%Fp' $1)
 	for file in ${files}; do
 		case "${file}" in
 		*.sample) ;;
@@ -514,7 +509,7 @@ get_origin_from_pkgname() {
 }
 
 get_pkgname_from_portdir() {
-	local pkgname
+	local pkgname=
 	[ -d "$1" ] || return 1
 	load_make_vars
 	pkgname=$( cd "$1" && ${PKG_MAKE} -V PKGNAME ) || return 1
@@ -525,8 +520,8 @@ get_pkgname_from_portdir() {
 }
 
 get_overlay_dir() {
-	local overlay IFS
-	IFS='	 
+	local overlay=
+	local IFS='	 
 '
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
 		get_pkgname_from_portdir ${overlay}/$1 2>&1 > /dev/null || continue
@@ -536,8 +531,7 @@ get_overlay_dir() {
 }
 
 get_portdir_from_origin() {
-	local portdir
-	portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
+	local portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
 	return 1
 }
 
@@ -547,8 +541,7 @@ get_pkgname_from_origin() {
 }
 
 get_depend_pkgnames() {
-	local deps X pkgfile
-	deps=
+	local deps= X= pkgfile=
 	if istrue ${opt_use_packages}; then
 		for X in $1; do
 			pkgfile="${PKGREPOSITORY}/$X${PKG_BINARY_SUFX}"
@@ -570,14 +563,10 @@ get_depend_pkgnames() {
 }
 
 get_strict_depend_pkgnames() {
-	local deps dels cut_deps
-	local pkg pkgdeps_file
-	local jobs pids
+	local deps= dels= cut_deps=
+	local pkg= pkgdeps_file=
+	local jobs=0 pids=
 
-	deps=; dels=; cut_deps=;
-
-	jobs=0
-	pids=
 	for pkg in $1; do
 		while [ $jobs -ge ${opt_maxjobs} ]; do
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
@@ -618,8 +607,8 @@ get_strict_depend_pkgnames() {
 }
 
 get_strict_depend_pkgs(){
-	local origin origins pkgdeps_files
-	pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
+	local origin= origins=
+	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
 	istrue ${opt_cleandeps} || { [ -e "${pkgdeps_file}" ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
 		{ echo >&2
@@ -659,8 +648,7 @@ get_depend_binary_pkgnames() {
 }
 
 get_lock() {
-	local lock
-	lock=$(${PKG_QUERY} '%k' $1) || return 1
+	local lock=$(${PKG_QUERY} '%k' $1) || return 1
 	case ${lock} in
 	0)	return 1 ;;
 	1)	return 0 ;;
@@ -673,7 +661,7 @@ get_subpackage() {
 }
 
 pkg_sort() {
-	local pkgs pkg cnt dep_list sorted_dep_list
+	local pkgs= pkg= cnt=0 dep_list= sorted_dep_list=
 
 	case $# in
 	0|1)	upgrade_pkgs=$@; return 0
@@ -683,7 +671,6 @@ pkg_sort() {
 
 	# check dependencies
 	echo -n 'Checking dependencies' >&2
-	dep_list= ; cnt=0
 	while : ; do
 		echo -n '.' >&2
 		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
@@ -774,7 +761,7 @@ expand_path() {
 }
 
 try() {
-	local _errno
+	local _errno=
 	"$@" || {
 		_errno=$?
 		warn "Command failed (exit code ${_errno}): $@"
@@ -791,9 +778,7 @@ xtry() {
 }
 
 build_package() {
-	local build_args
-
-	build_args=
+	local build_args=
 
 	if istrue ${opt_fetch}; then
 		build_args="checksum"
@@ -828,7 +813,7 @@ set_automatic_flag() {
 }
 
 install_pkg_binary_depends() {
-	local dep_name dep_origin installed_pkg X dep_pkgs
+	local dep_name= dep_origin= installed_pkg= X= dep_pkgs=
 
 	info "Installing dependencies for '$1'"
 
@@ -856,8 +841,7 @@ install_pkg_binary_depends() {
 }
 
 install_pkg_binary() {
-	local install_args pkgname
-	install_args=
+	local install_args= pkgname=
 	info "Installing '$1'"
 	istrue ${opt_force} && install_args="-f"
 	xtry ${PKG_ADD} ${install_args} "$1" || return 1
@@ -869,8 +853,7 @@ install_pkg_binary() {
 }
 
 install_package() {
-	local install_args file
-	install_args=
+	local install_args= file=
 
 	info "Installing '$1'"
 
@@ -905,8 +888,7 @@ install_package() {
 }
 
 deinstall_package() {
-	local deinstall_args
-	deinstall_args=
+	local deinstall_args=
 
 	istrue ${do_upgrade} || istrue ${opt_force} && deinstall_args="-f"
 	deinstall_args="${deinstall_args} -y" || \
@@ -925,22 +907,15 @@ deinstall_package() {
 }
 
 clean_package() {
-	local clean_args
-	clean_args=
-
 	info "Cleaning '$1'"
-
 	cd "$1" || return 1
-
-	try ${PKG_MAKE} ${clean_args} clean || return 1
+	try ${PKG_MAKE} clean || return 1
 }
 
 do_fetch() {
-	local fetch_cmd fetch_args fetch_path
-
-	fetch_path=${2:-${1##*/}}
-	fetch_cmd=${PKG_FETCH%%[$IFS]*}
-	fetch_args=${PKG_FETCH#${fetch_cmd}}
+	local fetch_path=${2:-${1##*/}}
+	local fetch_cmd=${PKG_FETCH%%[$IFS]*}
+	local fetch_args=${PKG_FETCH#${fetch_cmd}}
 
 	case ${fetch_cmd##*/} in
 	curl|fetch|ftp|axel)	fetch_args="${fetch_args} -o ${fetch_path}" ;;
@@ -961,9 +936,9 @@ do_fetch() {
 }
 
 fetch_package() {
-	local pkg uri uri_path
+	local uri= uri_path=
+	local pkg=$1${PKG_BINARY_SUFX}
 
-	pkg=$1${PKG_BINARY_SUFX}
 	if [ -e "${PKGREPOSITORY}/${pkg}" ]; then
 		return 0
 	elif ! create_dir "${PKGREPOSITORY}" || [ ! -w "${PKGREPOSITORY}" ]; then
@@ -984,8 +959,7 @@ fetch_package() {
 }
 
 find_package() {
-	local pkgfile
-	pkgfile="${PKGREPOSITORY}/$1${PKG_BINARY_SUFX}"
+	local pkgfile="${PKGREPOSITORY}/$1${PKG_BINARY_SUFX}"
 	[ -e "${pkgfile}" ] && echo ${pkgfile} && return 0
 	return 1
 }
@@ -1005,7 +979,7 @@ backup_file() {
 }
 
 restore_package() {
-	local pkgname
+	local pkgname=
 	if [ -e "$1" ]; then
 		info "Restoring the old version"
 		install_pkg_binary "$1"
@@ -1030,7 +1004,7 @@ process_package() {
 }
 
 preserve_libs() {
-	local file
+	local file=
 	istrue ${opt_preserve_libs} || return 0
 	preserved_files=
 	for file in $(${PKG_QUERY} '%Fp' $1); do
@@ -1047,12 +1021,11 @@ preserve_libs() {
 }
 
 clean_libs() {
-	local del_files dest file
+	local del_files= dest= file=
 	if istrue ${opt_preserve_libs} || isempty ${preserved_files}; then
 		return 0
 	fi
 	info "Cleaning the preserved shared libraries"
-	del_files=
 	for file in ${preserved_files}; do
 		dest="${PKGCOMPATDIR}/${file##*/}"
 		if [ -e "${dest}" ]; then
@@ -1067,14 +1040,14 @@ clean_libs() {
 }
 
 parse_moved() {
-	local IFS ret info origin new_origin portdir
-	local date why checked X
+	local new_origin= portdir=
+	local date= why= X=
 
-	ret=$1; eval $1=
-	info=$2; eval $2=
-	origin=$3; checked=
+	local ret=$1; eval $1=
+	local info=$2; eval $2=
+	local origin=$3; checked=
 
-	IFS='|'
+	local IFS='|'
 	while X=$(grep "^${origin}|" "${PORTSDIR}/MOVED"); do
 		set -- $X
 		origin=${1-}; new_origin=${2-}; date=${3-}; why=${4-}
@@ -1101,7 +1074,7 @@ parse_moved() {
 }
 
 trace_moved() {
-	local moved reason
+	local moved= reason=
 
 	parse_moved 'moved' 'reason' "$1" || return 1
 
@@ -1123,7 +1096,7 @@ trace_moved() {
 }
 
 init_result() {
-	local X
+	local X=
 
 	log_file="${tmpdir}/${0##*/}.log"
 	create_file "${log_file}" || return 1
@@ -1142,12 +1115,10 @@ set_result() {
 }
 
 show_result() {
-	local mask descr X
+	local mask= descr= X=
 
 	istrue ${opt_verbose} || return 0
 
-	mask=
-	descr=
 	istrue ${log_length} || return 0
 
 	for X in ${log_format}; do
@@ -1236,7 +1207,7 @@ set_pkginfo_install() {
 }
 
 set_pkginfo_replace() {
-	local X
+	local X=
 	pkg_name=$1
 	pkg_origin=$(get_origin_from_pkgname ${pkg_name})
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
@@ -1364,8 +1335,9 @@ do_install_config() {
 }
 
 do_install() {
+	local cur_pkgname= pkg=
+
 	err=; result=
-	local cur_pkgname pkg
 
 	pkg=${1}
 
@@ -1443,8 +1415,9 @@ do_install() {
 }
 
 do_replace_config() {
+	local cur_pkgname= X=
+
 	err=; result=
-	local cur_pkgname X
 
 	cur_pkgname=$1
 	pkg_flavor=
@@ -1497,12 +1470,11 @@ do_replace_config() {
 }
 
 do_replace() {
-	local deps pkg_tmpdir old_pkg
-	local cur_pkgname cur_origin origin automatic_flag
-	local X
+	local deps= pkg_tmpdir= old_pkg=
+	local cur_pkgname= cur_origin= origin= automatic_flag=
+	local X=
 
-	err=; result=
-	pkg_flavor=
+	err=; result=; pkg_flavor=
 
 	if ! isempty "${failed_pkgs}" && ! istrue ${opt_keep_going}; then
 		for X in $(get_depend_pkgnames "$1"); do
@@ -1699,7 +1671,7 @@ do_version() {
 }
 
 main() {
-	local ARG ARGV jobs pids cnt X
+	local ARG= ARGV= jobs=0 pids= cnt= X=
 
 	isempty $(which pkg-static) &&
 		{ warn 'pkg not found. Please install the pkg command.'; exit 1; }
@@ -1763,8 +1735,6 @@ main() {
 	istrue ${opt_use_packages} && USE_PKGS='*'
 
 	if istrue ${opt_version}; then
-		jobs=0
-		pids=
 		for ARG in ${upgrade_pkgs}; do
 			while [ ${jobs} -ge ${opt_maxjobs} ]; do
 				jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
