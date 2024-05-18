@@ -849,7 +849,7 @@ install_pkg_binary_depends() {
 			}
 			set_automatic_flag ${dep_origin} '1' || return 1
 			info "Returning to install of '$1'"
-			isempty ${do_upgrade} && set_pkginfo_replace $1 || set_pkginfo_install $1
+			isempty ${do_upgrade} && set_pkginfo_replace $1 '' || set_pkginfo_install $1
 		fi
 	done
 }
@@ -907,8 +907,8 @@ deinstall_package() {
 	local deinstall_args=
 
 	istrue ${do_upgrade} || istrue ${opt_force} && deinstall_args="-f"
-	deinstall_args="${deinstall_args} -y" || \
-		(istrue ${opt_verbose} && deinstall_args="${deinstall_args} -v")
+	deinstall_args="${deinstall_args} -y" ||
+		{ istrue ${opt_verbose} && deinstall_args="${deinstall_args} -v"; }
 
 	info "Deinstalling '$1'"
 
@@ -1234,7 +1234,7 @@ set_pkginfo_install() {
 }
 
 set_pkginfo_replace() {
-	local X=
+	local X= config=$2
 	pkg_name=$1
 	pkg_origin=$(get_origin_from_pkgname ${pkg_name})
 	pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
@@ -1257,7 +1257,7 @@ set_pkginfo_replace() {
 				pkg_portdir=$(expand_path "${X}/")
 				pkg_portdir=${pkg_portdir%/}
 				get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1 ||
-					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
+					{ isempty ${config} && warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			*/*@*|*/*)
@@ -1277,10 +1277,10 @@ set_pkginfo_replace() {
 					pkg_portdir=$(expand_path "${pkg_portdir}")
 					pkg_portdir="${pkg_portdir%/}"
 					get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1||
-						{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
+						{ isempty ${config} && warn "'${pkg_portdir}' is not portdir!"; return 1; }
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
-					warn "'$X' not found."
+					isempty ${config} && warn "'$X' not found."
 					return 1
 				fi ;;
 			*)
@@ -1288,7 +1288,7 @@ set_pkginfo_replace() {
 				pkg_portdir=$(expand_path "$X")
 				pkg_portdir="${pkg_portdir%/}"
 				get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1||
-					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
+					{ isempty ${config} && warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
 			esac
@@ -1305,12 +1305,14 @@ set_pkginfo_replace() {
 			err="not installed or no origin recorded"
 			return 1
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
-			trace_moved ${pkg_origin} || return 1
+			isempty ${config} &&
+				{ trace_moved ${pkg_origin} || return 1; } ||
+				{ trace_moved ${pkg_origin} > /dev/null 2>&1 || return 1; }
 		fi
 		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") || return 1
 	else
 		pkg_name=$(get_binary_pkgname "${pkg_binary}") ||
-			{ warn "'$1' is not a valid package." ; return 1; }
+			{ isempty ${config} && warn "'$1' is not a valid package." ; return 1; }
 		pkg_flavor=$(get_binary_flavor "${pkg_binary}") || return 1
 	fi
 
@@ -1334,13 +1336,13 @@ do_install_config() {
 	err=; result=
 
 	set_pkginfo_install "$1" || {
-		info "Skipping '$1'${err:+ - ${err}}."
+		#istrue ${opt_verbose} && warn "Skipping '$1'${err:+ - ${err}}."
 		result=skipped
 		return 0
 	}
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		info "Skipping '${pkg_name}' - ignored"
+		#istrue ${opt_verbose} && warn "Skipping '${pkg_name}' - ignored"
 		result=ignored
 		return 0
 	fi
@@ -1381,7 +1383,8 @@ do_install() {
 		return 0
 	fi
 
-	if ! istrue ${opt_force} && isempty ${pkg_flavor} && cur_pkgname=$(get_pkgname_from_origin ${pkg_origin}); then
+	if ! istrue ${opt_force} && isempty ${pkg_flavor} &&
+		cur_pkgname=$(get_pkgname_from_origin ${pkg_origin}); then
 		info "Skipping '${pkg_origin}' - '${cur_pkgname}' is already installed"
 		return 0
 	fi
@@ -1452,30 +1455,34 @@ do_replace_config() {
 
 	pkg_flavor=
 
-	set_pkginfo_replace "$1" || {
-		info "Skipping '$1'${err:+ - ${err}}."
+	set_pkginfo_replace $1 'config' || {
+		#istrue ${opt_verbose} && warn "Skipping '$1'${err:+ - ${err}}."
 		result=${err}
 		return 0
 	}
 
 	if get_lock ${cur_pkgname}; then
-		if istrue ${opt_unlock}; then
-			info "${cur_pkgname} will be unlockd."
-		else
-			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
-			result=locked
-			return 0
-		fi
+		#if istrue ${opt_unlock}; then
+		#	istrue ${opt_verbose} && warn "${cur_pkgname} will be unlockd."
+		#else
+		#	istrue ${opt_verbose} &&
+		#		warn "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
+		#	result=locked
+		#	return 0
+		#fi
+		istrue ${opt_unlock} && { result=locked; return 0; }
 	fi
 
 	if get_subpackage ${cur_pkgname}; then
-		info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
+		#istrue ${opt_verbose} &&
+		#	warn "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
 		result=subpackage
 		return 0
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		warn "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		#istrue ${opt_verbose} &&
+		#	warn "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		result=ignored
 		return 0
 	fi
@@ -1520,15 +1527,15 @@ do_replace() {
 
 	cur_pkgname=$1
 
-	set_pkginfo_replace "$1" || {
-		warn "Skipping '$1'${err:+ - ${err}}."
+	set_pkginfo_replace $1 '' || {
+		info "Skipping '$1'${err:+ - ${err}}."
 		result=${err}
 		return 0
 	}
 
 	if get_lock ${cur_pkgname}; then
 		if istrue ${opt_unlock}; then
-			info "'${cur_pkgname}' is unlocked."
+			warn "'${cur_pkgname}' is unlocked."
 			pkg_unlock=1
 		else
 			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
@@ -1545,7 +1552,7 @@ do_replace() {
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		warn "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		result=ignored
 		return 0
 	fi
@@ -1555,14 +1562,14 @@ do_replace() {
 		if istrue ${opt_force}; then
 			info "Reinstalling '${pkg_name}'"
 		else
-			warn "No need to replace '${cur_pkgname}'. (specify -f to force)"
+			info "No need to replace '${cur_pkgname}'. (specify -f to force)"
 			return 0
 		fi ;;
 	*)	info "Replacing '${cur_pkgname}' with '${pkg_name}'" ;;
 	esac
 
 	if istrue ${opt_noexecute}; then
-		result="done"
+		result=done
 		return 0
 	elif istrue ${opt_interactive}; then
 		prompt_yesno || return 0
@@ -1683,7 +1690,7 @@ do_version() {
 
 	printf "\\r%-$(tput co)s\\r" "--->  Checking version: $1" >&2
 
-	if set_pkginfo_replace "$1"; then
+	if set_pkginfo_replace $1 ''; then
 		case ${pkg_name} in
 		"$1")	return 0 ;;
 		esac
@@ -1820,7 +1827,7 @@ main() {
 		done
 
 		# config
-		(istrue ${opt_config} || istrue ${opt_force_config}) && {
+		{ istrue ${opt_config} || istrue ${opt_force_config}; } && {
 			set -- ${install_pkgs}
 			cnt=0
 			ARGV=
@@ -1858,7 +1865,6 @@ main() {
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
 			set_result "${ARG}" "${result:-ignored}" "${err}"
-
 			eval info \"** [$((cnt+=1))/$#] - ${log_summary}\"
 		done
 
@@ -1874,7 +1880,6 @@ main() {
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
 			set_result "${ARG}" "${result:-ignored}" "${err}"
-
 			eval info \"** [$((cnt+=1))/$#] - ${log_summary}\"
 		done
 
