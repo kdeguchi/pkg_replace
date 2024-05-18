@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240516
+PKG_REPLACE_VERSION=20240518
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1415,11 +1415,10 @@ do_install() {
 }
 
 do_replace_config() {
-	local cur_pkgname= X=
+	local cur_pkgname=$1 X=
 
 	err=; result=
 
-	cur_pkgname=$1
 	pkg_flavor=
 
 	set_pkginfo_replace "$1" || {
