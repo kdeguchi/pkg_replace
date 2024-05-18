@@ -1377,6 +1377,7 @@ do_install() {
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${pkg_name}' - ignored"
+		result=ignored
 		return 0
 	fi
 
@@ -1474,7 +1475,7 @@ do_replace_config() {
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		warn "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		result=ignored
 		return 0
 	fi
@@ -1520,7 +1521,7 @@ do_replace() {
 	cur_pkgname=$1
 
 	set_pkginfo_replace "$1" || {
-		info "Skipping '$1'${err:+ - ${err}}."
+		warn "Skipping '$1'${err:+ - ${err}}."
 		result=${err}
 		return 0
 	}
@@ -1544,7 +1545,7 @@ do_replace() {
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
-		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		warn "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
 		result=ignored
 		return 0
 	fi
