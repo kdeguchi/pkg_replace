@@ -135,7 +135,7 @@ init_variables() {
 	set_signal_exit=
 	optind=1
 	log_file=
-	log_format="+:done -:ignored *:skipped !:failed #:locked %:subpackage"
+	log_format="+:done -:ignored *:skipped !:failed #:locked %:subpackage x:removed"
 	log_length=0
 	log_summary=
 	cnt_done=
@@ -144,6 +144,14 @@ init_variables() {
 	cnt_failed=
 	cnt_locked=
 	cnt_subpackage=
+	cnt_removed=
+	log_sign_done=+
+	log_sign_ignored=-
+	log_sign_skipped=*
+	log_sign_failed=!
+	log_sign_locked=#
+	log_sign_subpackage=%
+	log_sign_removed=x
 	err=
 	result=
 	install_pkgs=
@@ -269,7 +277,7 @@ parse_args() {
 		case ${ARG} in
 		*${PKG_BINARY_SUFX})
 			[ ! -e "${ARG}" ] && warn "'${ARG}' does not exist." && continue
-			get_installed_pkgname $(get_binary_pkgname "${ARG}") 2>&1 > /dev/null &&
+			get_installed_pkgname $(get_binary_pkgname "${ARG}") > /dev/null 2>&1 &&
 				install_pkgs="${install_pkgs} ${ARG}" && continue
 			;;
 		*@*/*)	;;
@@ -433,8 +441,8 @@ run_config_script() {
 }
 
 run_rc_script() {
-	local file=
-	local files=$(${PKG_QUERY} '%Fp' $1)
+	local files= file=
+	files=$(${PKG_QUERY} '%Fp' $1)
 	for file in ${files}; do
 		case "${file}" in
 		*.sample) ;;
@@ -499,7 +507,7 @@ load_env_vars() {
 }
 
 get_installed_pkgname() {
-	${PKG_QUERY} -g '%n-%v' $1 2> /dev/null || return 1
+	${PKG_QUERY} -g '%n-%v' $1 || return 1
 	return 0
 }
 
@@ -524,14 +532,15 @@ get_overlay_dir() {
 	local IFS='	 
 '
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		get_pkgname_from_portdir ${overlay}/$1 2>&1 > /dev/null || continue
+		get_pkgname_from_portdir ${overlay}/$1 > /dev/null 2>&1 || continue
 		echo ${overlay} && return 0
 	done
 	return 1
 }
 
 get_portdir_from_origin() {
-	local portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
+	local portdir=
+	portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
 	return 1
 }
 
@@ -608,7 +617,8 @@ get_strict_depend_pkgnames() {
 
 get_strict_depend_pkgs(){
 	local origin= origins=
-	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
+	local pkgdeps_file=
+	pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
 	istrue ${opt_cleandeps} || { [ -e "${pkgdeps_file}" ] && return 0; }
 	origin=$(get_origin_from_pkgname $1) ||
 		{ echo >&2
@@ -648,7 +658,8 @@ get_depend_binary_pkgnames() {
 }
 
 get_lock() {
-	local lock=$(${PKG_QUERY} '%k' $1) || return 1
+	local lock=
+	lock=$(${PKG_QUERY} '%k' $1) || return 1
 	case ${lock} in
 	0)	return 1 ;;
 	1)	return 0 ;;
@@ -1048,6 +1059,7 @@ parse_moved() {
 	local origin=$3; checked=
 
 	local IFS='|'
+
 	while X=$(grep "^${origin}|" "${PORTSDIR}/MOVED"); do
 		set -- $X
 		origin=${1-}; new_origin=${2-}; date=${3-}; why=${4-}
@@ -1078,20 +1090,23 @@ trace_moved() {
 
 	parse_moved 'moved' 'reason' "$1" || return 1
 
+	err=
 	case ${moved} in
-	'')
-		warn "Path is wrong or has no Makefile:"
-		return 1 ;;
 	removed)
 		warn "'$1' has removed from ports tree:"
 		warn "    ${reason}"
+		err=removed
+		return 1 ;;
+	'')
+		warn "Path is wrong or has no Makefile:"
+		err=broken
 		return 1 ;;
 	*)
 		warn "'$1' has moved to '${moved}':"
 		warn "    ${reason}"
 		pkg_origin=${moved}
 		pkg_portdir=$(get_portdir_from_origin ${moved})
-		;;
+		return 0 ;;
 	esac
 }
 
@@ -1122,6 +1137,13 @@ show_result() {
 	istrue ${log_length} || return 0
 
 	for X in ${log_format}; do
+		case ${X#*:} in
+		failed)	istrue ${cnt_failed} || continue ;;
+		skipped)	istrue ${cnt_skipped} || continue ;;
+		locked)	istrue ${cnt_locked} || continue ;;
+		subpackage)	istrue ${cnt_subpackage} || continue ;;
+		*)	istrue ${opt_verbose} || continue ;;
+		esac
 		mask="${mask}${X%%:*}"
 		descr="${descr:+${descr} / }${X}"
 	done
@@ -1174,7 +1196,7 @@ set_pkginfo_install() {
 			# match portdir
 			pkg_portdir=$(expand_path "${pkg_portdir}")
 			pkg_portdir=${pkg_portdir%/}
-			get_pkgname_from_portdir "${pkg_portdir}" 2>&1 > /dev/null ||
+			get_pkgname_from_portdir "${pkg_portdir}" > /dev/null 2>&1 ||
 				{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 			pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 		else
@@ -1220,7 +1242,7 @@ set_pkginfo_replace() {
 
 	for X in ${replace_pkgs}; do
 		case ${pkg_name} in
-		"${X%%=*}")
+		${X%%=*})
 			# match pkgname=foo, foo is *.pkg, origin@flavor, origin or portdir.
 			X=${X#*=} # get information after '='
 			case $X in
@@ -1229,7 +1251,7 @@ set_pkginfo_replace() {
 				# match relative path '.'
 				pkg_portdir=$(expand_path "${X}/")
 				pkg_portdir=${pkg_portdir%/}
-				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+				get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1 ||
 					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
@@ -1242,14 +1264,14 @@ set_pkginfo_replace() {
 				*)
 					pkg_flavor=; pkg_origin="$X"; pkg_portdir=$(expand_path "$X") ;;
 				esac
-				if get_portdir_from_origin "${pkg_origin}" 2>&1 > /dev/null; then
+				if get_portdir_from_origin "${pkg_origin}" > /dev/null 2>&1; then
 					# origin
 					pkg_origin=${pkg_origin}
-				elif get_pkgname_from_portdir "${pkg_portdir}" 2>&1 > /dev/null; then
+				elif get_pkgname_from_portdir "${pkg_portdir}" > /dev/null 2>&1; then
 					# portdir
 					pkg_portdir=$(expand_path "${pkg_portdir}")
 					pkg_portdir="${pkg_portdir%/}"
-					get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+					get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1||
 						{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 					pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				else
@@ -1260,7 +1282,7 @@ set_pkginfo_replace() {
 				#match other
 				pkg_portdir=$(expand_path "$X")
 				pkg_portdir="${pkg_portdir%/}"
-				get_pkgname_from_portdir ${pkg_portdir} 2>&1 > /dev/null ||
+				get_pkgname_from_portdir ${pkg_portdir} > /dev/null 2>&1||
 					{ warn "'${pkg_portdir}' is not portdir!"; return 1; }
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 				;;
@@ -1278,7 +1300,7 @@ set_pkginfo_replace() {
 			err="not installed or no origin recorded"
 			return 1
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
-			trace_moved ${pkg_origin} || { err="skipped"; return 1; }
+			trace_moved ${pkg_origin} || return 1
 		fi
 		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") || return 1
 	else
@@ -1755,7 +1777,7 @@ main() {
 
 		# check installed package
 		for X in ${upgrade_pkgs}; do
-			get_installed_pkgname $X 2>&1 > /dev/null || {
+			get_installed_pkgname $X > /dev/null 2>&1 || {
 				install_pkgs="${install_pkgs} $X";
 				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s| $X | |g");
 			}
