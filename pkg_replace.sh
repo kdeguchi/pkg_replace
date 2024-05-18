@@ -1713,19 +1713,22 @@ do_version() {
 
 remove_compat_libs() {
 	local pkgs=$@ file=
+	isempty ${pkgs} && return 0
 	istrue ${opt_batch} && {
 		info "Remove the same name libraries in '${PKGCOMPATDIR}'" &&
 		prompt_yesno || return 0
 	}
-	for file in $(${PKG_QUERY} '%Fp' $@); do
+	for file in $(${PKG_QUERY} '%Fp' ${pkgs}); do
 		file=${file##*/}
 		case ${file} in
 		*.so.[0-9]*|*.so)
+			istrue ${opt_verbose} && info "Checking '${PKGCOMPATDIR}/${file}'"
 			[ -e ${PKGCOMPATDIR}/${file} ] && {
 				info "Remove the same name library: '${PKGCOMPATDIR}/${file}'"
 				! istrue ${opt_noexecute} &&
 					xtry rm -f ${PKGCOMPATDIR}/${file}
-			} ;;
+			} || istrue ${opt_verbose} &&
+				warn "'${PKGCOMPATDIR}/${file}' not found." ;;
 		esac
 	done
 	return 0
@@ -1751,7 +1754,7 @@ main() {
 		[ ${opt_depends} -eq 1 ] && opt_depends=0
 		opt_required_by=0
 	elif ! isempty ${opt_remove_compat_libs}; then
-		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs}) > /dev/null 2>&1
+		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs})
 		! istrue $# && exit 0
 	elif ! istrue $#; then
 		usage
