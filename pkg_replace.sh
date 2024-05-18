@@ -32,6 +32,7 @@ usage() {
 	        [--nocleandeps] [--noconfig] [--version]
 	        [-j jobs] [-l file] [-L log-prefix]
 	        [-m make_args] [-M make_env] [-t make_target] [-x pkgname]
+	        [-X pkgname ]
 	        [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -97,6 +98,7 @@ init_options() {
 	opt_omit_check=0
 	opt_package=0
 	opt_preserve_libs=1
+	opt_remove_compat_libs=
 	opt_required_by=0
 	opt_result=
 	opt_target=
@@ -214,7 +216,7 @@ parse_options() {
 		esac
 	done
 
-	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRt:uUvVwWx: X; do
+	while getopts abBcCdfFhiJj:kl:L:m:M:nNOpPrRt:uUvVwWx:X: X; do
 		case $X in
 		a)	opt_all=1 ;;
 		b)	opt_keep_backup=1 ;;
@@ -248,6 +250,7 @@ parse_options() {
 		w)	opt_beforeclean=0 ;;
 		W)	opt_afterclean=0 ;;
 		x)	opt_exclude="${opt_exclude} ${OPTARG}" ;;
+		X)	opt_remove_compat_libs="${opt_remove_compat_libs} ${OPTARG}" ;;
 		*)	usage ;;
 		esac
 	done
@@ -863,8 +866,26 @@ install_pkg_binary() {
 	run_config_script 'AFTERINSTALL'
 }
 
+remove_preserved_files() {
+	local file=
+	! isempty ${preserved_files} && {
+		for file in $(${PKG_QUERY} '%Fp' $1); do
+			case ${file##*/} in
+			*.so.[0-9]*|*.so)
+				case " ${preserved_files} " in
+				*[[:space:]]${file}[[:space:]]*)
+					istrue ${opt_verbose} &&
+						info "Remove the same name library: '${PKGCOMPATDIR}/${file##*/}'"
+					rm -f ${PKGCOMPATDIR}/${file##*/} ;;
+				esac
+				;;
+			esac
+		done
+	}
+}
+
 install_package() {
-	local install_args= file=
+	local install_args=
 
 	info "Installing '$1'"
 
@@ -873,22 +894,6 @@ install_package() {
 
 	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
-
-	! isempty ${preserved_files} && {
-		for file in $(${PKG_QUERY} '%Fp' $(${PKG_MAKE} -V PKGNAME)); do
-			case ${file##*/} in
-			*.so.[0-9]*|*.so)
-				case " ${preserved_files} " in
-				*[[:space:]]${file}[[:space:]]*)
-					istrue ${opt_verbose} &&
-						info "Remove the same name library: '${PKGCOMPATDIR}/${file##*/}'"
-					xtry rm -f ${PKGCOMPATDIR}/${file##*/}
-					;;
-				esac
-				;;
-			esac
-		done
-	}
 
 	istrue ${pkg_unlock} && ${PKG_LOCK} -y $(get_pkgname_from_portdir $1)
 	if istrue ${opt_afterclean}; then
@@ -1092,14 +1097,14 @@ trace_moved() {
 
 	err=
 	case ${moved} in
+	'')
+		warn "Path is wrong or has no Makefile:"
+		err=broken
+		return 1 ;;
 	removed)
 		warn "'$1' has removed from ports tree:"
 		warn "    ${reason}"
 		err=removed
-		return 1 ;;
-	'')
-		warn "Path is wrong or has no Makefile:"
-		err=broken
 		return 1 ;;
 	*)
 		warn "'$1' has moved to '${moved}':"
@@ -1330,12 +1335,13 @@ do_install_config() {
 
 	set_pkginfo_install "$1" || {
 		info "Skipping '$1'${err:+ - ${err}}."
-		result="skipped"
+		result=skipped
 		return 0
 	}
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${pkg_name}' - ignored"
+		result=ignored
 		return 0
 	fi
 
@@ -1365,7 +1371,7 @@ do_install() {
 
 	set_pkginfo_install ${pkg} || {
 		info "Skipping '$pkg'${err:+ - ${err}}."
-		result="skipped"
+		result=skipped
 		return 0
 	}
 
@@ -1382,7 +1388,7 @@ do_install() {
 	info "Installing '${pkg_name}' from '${pkg}'"
 
 	if istrue ${opt_noexecute}; then
-		result="done"
+		result=done
 		return 0
 	elif istrue ${opt_interactive}; then
 		prompt_yesno || return 0
@@ -1417,7 +1423,7 @@ do_install() {
 	fi
 
 	if istrue ${opt_fetch} || ! isempty ${opt_target} || istrue ${opt_build}; then
-		result="done"
+		result=done
 		return 0
 	fi
 
@@ -1427,8 +1433,10 @@ do_install() {
 		*)	install_pkg_binary "${pkg_binary}" ;;
 		esac
 	}; then
-		result="done"
+		remove_preserved_files ${pkg_name}
+		result=done
 	else
+		remove_preserved_files ${cur_pkgname}
 		err="install error"
 		return 1
 	fi
@@ -1454,19 +1462,20 @@ do_replace_config() {
 			info "${cur_pkgname} will be unlockd."
 		else
 			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
-			result="locked"
+			result=locked
 			return 0
 		fi
 	fi
 
 	if get_subpackage ${cur_pkgname}; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
-		result="subpackage"
+		result=subpackage
 		return 0
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		result=ignored
 		return 0
 	fi
 
@@ -1476,7 +1485,7 @@ do_replace_config() {
 			err="config-conditional error"
 			return 1
 		}
-		result="done"
+		result=done
 	fi
 
 	if istrue ${opt_force_config} && isempty ${pkg_binary}; then
@@ -1485,7 +1494,7 @@ do_replace_config() {
 			err="config error"
 			return 1
 		}
-		result="done"
+		result=done
 	fi
 
 }
@@ -1502,7 +1511,7 @@ do_replace() {
 			case " ${failed_pkgs} " in
 			*[[:space:]]${X%-*}[[:space:]]*)
 				info "Skipping '$1' because a requisite package '$X' failed"
-				result="skipped"
+				result=skipped
 				return 0 ;;
 			esac
 		done
@@ -1522,7 +1531,7 @@ do_replace() {
 			pkg_unlock=1
 		else
 			info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}} (specify \`-U ${cur_pkgname%-*}\` to upgrade)"
-			result="locked"
+			result=locked
 			pkg_unlock=0
 			return 0
 		fi
@@ -1530,12 +1539,13 @@ do_replace() {
 
 	if get_subpackage ${cur_pkgname}; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name})${err:+ - ${err}}"
-		result="subpackage"
+		result=subpackage
 		return 0
 	fi
 
 	if ! istrue ${opt_force} && has_config 'IGNORE'; then
 		info "Skipping '${cur_pkgname}' (-> ${pkg_name}) - ignored"
+		result=ignored
 		return 0
 	fi
 
@@ -1587,7 +1597,7 @@ do_replace() {
 	fi
 
 	if istrue ${opt_fetch} || ! isempty ${opt_target} || istrue ${opt_build}; then
-		result="done"
+		result=done
 		return 0
 	fi
 
@@ -1629,7 +1639,8 @@ do_replace() {
 			*)	install_pkg_binary "${pkg_binary}" ;;
 			esac
 		}; then
-			result="done"
+			remove_preserved_files ${pkg_name}
+			result=done
 			set_automatic_flag ${pkg_name} ${automatic_flag} || return 1
 		else
 			err="install error"
@@ -1638,6 +1649,7 @@ do_replace() {
 				"please reinstall '${old_pkg}' manually."
 				return 1
 			}
+			remove_preserved_files ${cur_pkgname}
 			set_automatic_flag ${cur_pkgname} ${automatic_flag} || return 1
 		fi
 	else
@@ -1674,7 +1686,7 @@ do_version() {
 		case ${pkg_name} in
 		"$1")	return 0 ;;
 		esac
-		has_config 'IGNORE' && err="held"
+		has_config 'IGNORE' && err=ignored
 	elif isempty "${pkg_name}"; then
 		return 0
 	fi
@@ -1682,13 +1694,33 @@ do_version() {
 	printf "\\r%-$(tput co)s\\r" " " >&2
 
 	case ${err} in
-	held|skipped|subpackage)
+	ignored|removed|skipped|subpackage)
 		warn "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}"
 		return 0 ;;
 	*)
 		echo "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}" ;;
 	esac
 
+}
+
+remove_compat_libs() {
+	local pkgs=$@ file=
+	istrue ${opt_batch} && {
+		info "Remove the same name libraries in '${PKGCOMPATDIR}'" &&
+		prompt_yesno || return 0
+	}
+	for file in $(${PKG_QUERY} '%Fp' $@); do
+		file=${file##*/}
+		case ${file} in
+		*.so.[0-9]*|*.so)
+			[ -e ${PKGCOMPATDIR}/${file} ] && {
+				info "Remove the same name library: '${PKGCOMPATDIR}/${file}'"
+				! istrue ${opt_noexecute} &&
+					xtry rm -f ${PKGCOMPATDIR}/${file}
+			} ;;
+		esac
+	done
+	return 0
 }
 
 main() {
@@ -1710,6 +1742,9 @@ main() {
 		set -- '*'
 		[ ${opt_depends} -eq 1 ] && opt_depends=0
 		opt_required_by=0
+	elif ! isempty ${opt_remove_compat_libs}; then
+		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs}) > /dev/null 2>&1
+		! istrue $# && exit 0
 	elif ! istrue $#; then
 		usage
 	fi
@@ -1791,7 +1826,7 @@ main() {
 			for ARG in ${1+"$@"}; do
 				do_install_config "${ARG}" "${ARGV}" || {
 					warn "Fix the problem and try again."
-					result="failed"
+					result=failed
 					failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 				}
 				ARGV=${ARG}
@@ -1803,7 +1838,7 @@ main() {
 			for ARG in ${1+"$@"}; do
 				do_replace_config "${ARG}" "${ARGV}" || {
 					warn "Fix the problem and try again."
-					result="failed"
+					result=failed
 					failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 				}
 				ARGV=${ARG}
@@ -1818,7 +1853,7 @@ main() {
 		for ARG in ${1+"$@"}; do
 			do_install "${ARG}" || {
 				warn "Fix the problem and try again."
-				result="failed"
+				result=failed
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
 			set_result "${ARG}" "${result:-ignored}" "${err}"
@@ -1834,7 +1869,7 @@ main() {
 		for ARG in ${1+"$@"}; do
 			do_replace "${ARG}" || {
 				warn "Fix the problem and try again."
-				result="failed"
+				result=failed
 				failed_pkgs="${failed_pkgs} ${pkg_name%-*}"
 			}
 			set_result "${ARG}" "${result:-ignored}" "${err}"

@@ -1,4 +1,9 @@
 20240518
+*Add "-X" option.
+ Remove the libraries in PKGCOMPATDIR, when the specified packages have the
+ libraries with the same name as the one in PKGCOMPATDIR. This may be useful
+ when there are errors due to a mixture of old and new libraries.
+ See pkg_replace(1).
 *Fix the display of the summary.
 *Cleanup codes.
 

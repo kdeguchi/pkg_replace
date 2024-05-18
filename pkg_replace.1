@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (May 14, 2024)"
-.Dd May 14, 2024
+.\" Modified by Ken DEGUCHI (May 18, 2024)"
+.Dd May 18, 2024
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -29,6 +29,7 @@
 .Op Fl M Ar make_env
 .Op Fl t Ar make_target
 .Op Fl x Ar pkgname
+.Op Fl X Ar pkgname
 .Oo
 .Op Ar pkgname\fR[=\fIpackage\fR]
 .Op Ar package
@@ -211,7 +212,7 @@ By default,
 preserves old shared libraries in
 .Va PKGCOMPATDIR .
 But if the new library and the old library have the same name, the old library is removed from
-.Va PKGCOMPATDIR.
+.Va PKGCOMPATDIR .
 .Pp
 .It Fl v
 Turn on verbose output.
@@ -235,6 +236,13 @@ after each installation.
 .Pp
 .It Fl x Ar GLOB
 Do not replace packages matching the specified glob pattern.
+.Pp
+.It Fl X Ar GLOB
+Remove the libraries in
+.Va PKGCOMPATDIR ,
+when the specified packages have the libraries with the same name as the one in
+.Va PKGCOMPATDIR .
+This may be useful when there are errors due to a mixture of old and new libraries.
 .Pp
 .El
 .Sh EXAMPLES
