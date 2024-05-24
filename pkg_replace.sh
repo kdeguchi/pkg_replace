@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240518
+PKG_REPLACE_VERSION=20240525
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -137,7 +137,7 @@ init_variables() {
 	set_signal_exit=
 	optind=1
 	log_file=
-	log_format="+:done -:ignored *:skipped !:failed #:locked %:subpackage x:removed"
+	log_format='+:done -:ignored *:skipped !:failed #:locked %:subpackage x:removed'
 	log_length=0
 	log_summary=
 	cnt_done=
@@ -817,7 +817,7 @@ build_package() {
 
 	xtry ${PKG_MAKE} ${build_args} || return 1
 
-	(istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1) || return 0
+	{ istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1; } || return 0
 
 }
 
@@ -1137,8 +1137,6 @@ set_result() {
 show_result() {
 	local mask= descr= X=
 
-	istrue ${opt_verbose} || return 0
-
 	istrue ${log_length} || return 0
 
 	for X in ${log_format}; do
@@ -1146,6 +1144,7 @@ show_result() {
 		failed)	istrue ${cnt_failed} || continue ;;
 		skipped)	istrue ${cnt_skipped} || continue ;;
 		locked)	istrue ${cnt_locked} || continue ;;
+		removed)	istrue ${cnt_removed} || continue ;;
 		subpackage)	istrue ${cnt_subpackage} || continue ;;
 		*)	istrue ${opt_verbose} || continue ;;
 		esac
@@ -1306,8 +1305,7 @@ set_pkginfo_replace() {
 			return 1
 		elif [ ! -e "${pkg_portdir}/Makefile" ]; then
 			isempty ${config} &&
-				{ trace_moved ${pkg_origin} || return 1; } ||
-				{ trace_moved ${pkg_origin} > /dev/null 2>&1 || return 1; }
+				trace_moved ${pkg_origin} || { err=removed; return 1; }
 		fi
 		pkg_name=$(get_pkgname_from_portdir "${pkg_portdir}") || return 1
 	else
@@ -1324,12 +1322,12 @@ set_pkginfo_replace() {
 
 make_config_conditional() {
 	load_make_vars
-	(cd "$1" && ${PKG_MAKE} config-conditional) || return 1
+	{ cd "$1" && ${PKG_MAKE} config-conditional; } || return 1
 }
 
 make_config() {
 	load_make_vars
-	(cd "$1" && ${PKG_MAKE} config) || return 1
+	{ cd "$1" && ${PKG_MAKE} config; } || return 1
 }
 
 do_install_config() {

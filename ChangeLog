@@ -1,3 +1,6 @@
+20240525
+*Improved the summary message.
+
 20240518
 *Add "-X" option.
  Remove the libraries in PKGCOMPATDIR, when the specified packages have the
