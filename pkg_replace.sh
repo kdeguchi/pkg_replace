@@ -284,8 +284,7 @@ parse_options() {
 	istrue ${opt_no_keep_backup} && opt_keep_backup=0
 	istrue ${opt_no_verbose} && opt_verbose=0
 
-	istrue ${opt_batch} && { opt_config=0; opt_interactive=0; }
-	istrue ${opt_batch} && { opt_force_config=0; opt_interactive=0; }
+	istrue ${opt_batch} && { opt_config=0; opt_force_config=0; opt_interactive=0; }
 	istrue ${opt_force_config} && opt_config=0
 	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 
