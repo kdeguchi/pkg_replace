@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240525
+PKG_REPLACE_VERSION=20240526
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -275,18 +275,19 @@ parse_options() {
 		esac
 	done
 
-	istrue ${opt_batch} && opt_config=0
-	istrue ${opt_batch} && opt_force_config=0
-	istrue ${opt_force_config} && opt_config=0
-	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 	istrue ${opt_no_afterclean} && opt_afterclean=0
+	istrue ${opt_no_backup} && opt_backup=0
 	istrue ${opt_no_beforeclean} && opt_beforeclean=0
 	istrue ${opt_no_cleandeps} && opt_cleandeps=0
 	istrue ${opt_no_config} && opt_config=0
 	istrue ${opt_no_force_config} && opt_force_config=0
-	istrue ${opt_no_verbose} && opt_verbose=0
-	istrue ${opt_no_backup} && opt_backup=0
 	istrue ${opt_no_keep_backup} && opt_keep_backup=0
+	istrue ${opt_no_verbose} && opt_verbose=0
+
+	istrue ${opt_batch} && { opt_config=0; opt_interactive=0; }
+	istrue ${opt_batch} && { opt_force_config=0; opt_interactive=0; }
+	istrue ${opt_force_config} && opt_config=0
+	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 
 	optind=$((OPTIND+long_optind))
 
