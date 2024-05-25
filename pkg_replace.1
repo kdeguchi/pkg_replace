@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (May 18, 2024)"
-.Dd May 18, 2024
+.\" Modified by Ken DEGUCHI (May 25, 2024)"
+.Dd May 25, 2024
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -10,17 +10,19 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl habBcCddfFiJknNOpPPqrRRuUvVwW
+.Op Fl \-all
 .Op Fl \-automatic
 .Op Fl \-batch
-.Op Fl \-clean
-.Op Fl \-cleanup
-.Op Fl \-config
+.Op Fl \-backup-package | Fl \-no-backup-package
+.Op Fl \-clean | Fl \-no-clean
+.Op Fl \-config | Fl \-no-config
+.Op Fl \-cleanup | Fl \-no-cleanup
+.Op Fl \-force-config | Fl \-no-force-config
 .Op Fl \-debug
-.Op Fl \-force-config
-.Op Fl \-noclean
-.Op Fl \-nocleanup
-.Op Fl \-nocleandeps
-.Op Fl \-noconfig
+.Op Fl \-no-backup
+.Op Fl \-no-cleandeps
+.Op Fl \-no-conf
+.Op Fl \-vebose | Fl \-no-verbose
 .Op Fl \-version
 .Op Fl j Ar jobs
 .Op Fl l Ar file
@@ -47,14 +49,16 @@ The following options are supported:
 .It Fl h
 Show help and exit.
 .Pp
-.It Fl a
+.It Fl a , Fl \-all
 Do with all the installed packages.
 .Pp
-.It Fl b
+.It Fl b , Fl \-backup-package
 Keep backup packages of the old versions.
 By default, the created backup package will be deleted after installation.
+See also,
+.Fl \-no-backup-package
 .Pp
-.It Fl B
+.It Fl B , Fl \-no-backup
 Do not backup old packages.
 .Pp
 .It Fl \-automatic
@@ -68,21 +72,29 @@ Run an upgrading process in a batch mode (with BATCH=yes).
 Do
 .Dq Li make config-conditional
 before build.
+See also,
+.Fl \-no-config .
 .It Fl C , Fl \-force-config
 Do
 .Dq Li make config
 before build.
+See also,
+.Fl \-no-force-config .
 .Pp
 .It Fl \-clean
 Do
 .Dq Li make clean
 before build.
+See also,
+.Fl w , Fl \-no-clean .
 .Pp
 .It Fl \-cleanup
 Do
 .Dq Li make clean
 after build.
 This is the default.
+See also,
+.Fl W , Fl \-no-cleanup .
 .Pp
 .It Fl d , Fl R
 In addition to the specified packages,
@@ -101,7 +113,7 @@ directory to run as fast as possible.
 See config file,
 .Ar pkg_replace.conf.sample .
 If you set
-.Fl \-nocleandeps ,
+.Fl \-no-cleandeps ,
 .Nm
 does not clean this directory.
 .Pp
@@ -160,17 +172,39 @@ command.
 .Pp
 .It Fl n
 Do not actually replace any packages.
+.It Fl \-no-backup-package
+Do not keep backup packages the old versions.
+Override
+.Fl b .
 .Pp
-.It Fl \-nocleandeps
+.It Fl \-no-cleandeps
 Do not clean
 .Ar PKG_REPLACE_DB_DIR .
-See option
-.Fl dd ,
-.Fl RR .
+See also,
+.Fl d , Fl dd , Fl R , Fl RR .
 .Pp
-.It Fl \-noconfig
-Do not read the configuration file.
+.It Fl \-no-conf
+Do not read the configuration file
+.Ar pkg_replace.conf .
 .Pp
+.It Fl \-no-config
+Do not
+.Dq Li make config-conditional
+bofore build.
+Override
+.Fl \-config .
+.Pp
+.It Fl \-no-force-config
+Do not
+.Dq Li make config
+bofore build.
+Override
+.Fl \-force-config .
+.Pp
+.It Fl \-no-verbose
+Turn off verbose output.
+Override
+.Fl v , Fl \-verbose .
 .It Fl N
 Install new packages, do not replace.
 .Pp
@@ -214,7 +248,7 @@ preserves old shared libraries in
 But if the new library and the old library have the same name, the old library is removed from
 .Va PKGCOMPATDIR .
 .Pp
-.It Fl v
+.It Fl v , Fl \-verbose
 Turn on verbose output.
 .Pp
 .It Fl V
@@ -223,16 +257,20 @@ List the installed packages that need updating.
 .It Fl \-version
 Print pkg_replace version.
 .Pp
-.It Fl w , Fl \-noclean
+.It Fl w , Fl \-no-clean
 Do not
 .Dq Li make clean
 before each build.
 This is the default.
+See also,
+.Fl \-clean
 .Pp
-.It Fl W , Fl \-nocleanup
+.It Fl W , Fl \-no-cleanup
 Do not
 .Dq Li make clean
 after each installation.
+See also,
+.Fl \-cleanup
 .Pp
 .It Fl x Ar GLOB
 Do not replace packages matching the specified glob pattern.

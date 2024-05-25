@@ -1,5 +1,6 @@
 20240525
 *Improved the summary message.
+*Cleanup options. Add "--no-verbose", "--no-config", and "--no-force-config", etc.
 
 20240518
 *Add "-X" option.

@@ -26,13 +26,16 @@ PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
 	cat <<-EOF
-	usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuUvVwW] [--automatic]
-	        [--batch] [--clean] [--cleanup] [--config]
-	        [--debug] [--force-config] [--noclean] [--nocleanup]
-	        [--nocleandeps] [--noconfig] [--version]
+	usage: ${0##*/} [-abBcCddfFhiJknNOpPPrRRuUvVwW]
+	        [--all] [--automatic] [--batch] [--debug] [--version]
+	        [--backup-package|--no-backup-package]
+	        [--clean|--no-clean] [--cleanup|--no-cleanup]
+	        [--config|--no-config] [--force-config|--no-force-config]
+	        [--verbose|--no-verbose]
+	        [--no-backup] [--no-cleandeps] [--no-conf]
 	        [-j jobs] [-l file] [-L log-prefix]
-	        [-m make_args] [-M make_env] [-t make_target] [-x pkgname]
-	        [-X pkgname ]
+	        [-m make_args] [-M make_env] [-t make_target]
+	        [-X pkgname ] [-x pkgname]
 	        [[pkgname[=package]] [package] [pkgorigin] ...]
 EOF
 	exit 0
@@ -72,29 +75,36 @@ prompt_yesno() {
 
 init_options() {
 	opt_afterclean=1
+	opt_no_afterclean=
 	opt_all=0
 	opt_automatic=0
 	opt_backup=1
+	opt_no_backup=
 	opt_batch=0
 	opt_beforeclean=0
+	opt_no_beforeclean=
 	opt_build=0
 	opt_cleandeps=1
+	opt_no_cleandeps=
 	opt_config=0
+	opt_no_config=
 	opt_depends=0
 	opt_exclude=
 	opt_force_config=0
+	opt_no_force_config=
 	opt_force=0
 	opt_fetch=0
 	opt_interactive=0
 	opt_keep_backup=0
+	opt_no_keep_backup=
 	opt_keep_going=0
 	opt_log_prefix=
 	opt_make_args=
 	opt_make_env=
 	opt_maxjobs=$(sysctl -n hw.ncpu)
 	opt_new=0
-	opt_noconf=0
-	opt_noexecute=0
+	opt_no_conf=0
+	opt_no_execute=0
 	opt_omit_check=0
 	opt_package=0
 	opt_preserve_libs=1
@@ -103,6 +113,7 @@ init_options() {
 	opt_result=
 	opt_target=
 	opt_verbose=0
+	opt_no_verbose=
 	opt_version=0
 	opt_unlock=0
 	opt_use_packages=0
@@ -201,17 +212,25 @@ parse_options() {
 
 	for X in ${long_opts}; do
 		case $X in
+		all)		opt_all=1 ;;
 		automatic)	opt_automatic=1 ;;
+		backup-package)	opt_keep_backup=1 ;;
 		batch)		opt_batch=1 ;;
 		config)		opt_config=1 ;;
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
-		noclean)	opt_beforeclean=0 ;;
-		nocleanup)	opt_afterclean=0 ;;
-		nocleandeps)	opt_cleandeps=0 ;;
-		noconfig)	opt_noconf=1 ;;
+		no-backup)	opt_no_backup=1; opt_backup=0 ;;
+		no-backup-package)	opt_no_keep_backup=1; opt_keep_backup=0 ;;
+		no-clean)	opt_no_beforeclean=1; opt_beforeclean=0 ;;
+		no-cleanup)	opt_no_afterclean=1; opt_afterclean=0 ;;
+		no-cleandeps)	opt_no_cleandeps=1; opt_cleandeps=0 ;;
+		no-conf)	opt_no_conf=1 ;;
+		no-config)	opt_no_config=1; opt_config=0 ;;
+		no-force-config)	opt_no_force_config=1; opt_force_config=0 ;;
+		no-verbose)	opt_no_verbose=1; opt_verbose=0 ;;
+		verbose)	opt_verbose=1 ;;
 		version)	echo ${PKG_REPLACE_VERSION}; exit 0 ;;
 		*)	usage ;;
 		esac
@@ -236,7 +255,7 @@ parse_options() {
 		L)	opt_log_prefix=$(expand_path ${OPTARG}) ;;
 		m)	opt_make_args="${opt_make_args} ${OPTARG}" ;;
 		M)	opt_make_env="${opt_make_env} ${OPTARG}" ;;
-		n)	opt_noexecute=1 ;;
+		n)	opt_no_execute=1 ;;
 		N)	opt_new=1 ;;
 		O)	opt_omit_check=1 ;;
 		p)	opt_package=1 ;;
@@ -260,6 +279,14 @@ parse_options() {
 	istrue ${opt_batch} && opt_force_config=0
 	istrue ${opt_force_config} && opt_config=0
 	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
+	istrue ${opt_no_afterclean} && opt_afterclean=0
+	istrue ${opt_no_beforeclean} && opt_beforeclean=0
+	istrue ${opt_no_cleandeps} && opt_cleandeps=0
+	istrue ${opt_no_config} && opt_config=0
+	istrue ${opt_no_force_config} && opt_force_config=0
+	istrue ${opt_no_verbose} && opt_verbose=0
+	istrue ${opt_no_backup} && opt_backup=0
+	istrue ${opt_no_keep_backup} && opt_keep_backup=0
 
 	optind=$((OPTIND+long_optind))
 
@@ -472,7 +499,7 @@ cmd_restart_rc() {
 }
 
 load_config() {
-	if ! isempty ${1-} && ! istrue ${opt_noconf}; then
+	if ! isempty ${1-} && ! istrue ${opt_no_conf}; then
 		istrue ${opt_verbose} && info "Loading $1"
 		parse_config "$1" || {
 			warn "Fatal error in $1."
@@ -1390,7 +1417,7 @@ do_install() {
 
 	info "Installing '${pkg_name}' from '${pkg}'"
 
-	if istrue ${opt_noexecute}; then
+	if istrue ${opt_no_execute}; then
 		result=done
 		return 0
 	elif istrue ${opt_interactive}; then
@@ -1567,7 +1594,7 @@ do_replace() {
 	*)	info "Replacing '${cur_pkgname}' with '${pkg_name}'" ;;
 	esac
 
-	if istrue ${opt_noexecute}; then
+	if istrue ${opt_no_execute}; then
 		result=done
 		return 0
 	elif istrue ${opt_interactive}; then
@@ -1724,7 +1751,7 @@ remove_compat_libs() {
 			istrue ${opt_verbose} && info "Checking '${PKGCOMPATDIR}/${file}'"
 			[ -e ${PKGCOMPATDIR}/${file} ] && {
 				info "Remove the same name library: '${PKGCOMPATDIR}/${file}'"
-				! istrue ${opt_noexecute} &&
+				! istrue ${opt_no_execute} &&
 					xtry rm -f ${PKGCOMPATDIR}/${file}
 			} || istrue ${opt_verbose} &&
 				warn "'${PKGCOMPATDIR}/${file}' not found." ;;
