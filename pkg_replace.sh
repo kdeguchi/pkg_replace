@@ -115,6 +115,7 @@ init_options() {
 	AFTERINSTALL=
 	IGNORE=
 	USE_PKGS=
+	PKG_REPLACE=
 }
 
 init_variables() {
