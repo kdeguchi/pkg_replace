@@ -570,7 +570,7 @@ get_depend_pkgnames() {
 			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
 		}
 	fi
-	echo ${deps} | tr ' ' '\n' | sort -u
+	echo ${deps} | tr '[:space:]' '\n' | sort -u
 	return 0
 }
 
@@ -596,15 +596,15 @@ get_strict_depend_pkgnames() {
 		if [ -f "${pkgdeps_file}" ]; then
 			if [ -s "${pkgdeps_file}" ]; then
 				deps=${deps}' '$(cat "${pkgdeps_file}")
-				deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
+				deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
 			else
 				dels=${dels}' '${pkg}
 			fi
 		fi
 	done
 
-	deps=$(echo ${deps} | tr ' ' '\n' | sort -u)
-	dels=$(echo ${dels} | tr ' ' '\n' | sort -u)
+	deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
+	dels=$(echo ${dels} | tr '[:space:]' '\n' | sort -u)
 
 	for pkg in ${deps}; do
 		case " ${dels} " in
@@ -628,11 +628,11 @@ get_strict_depend_pkgs(){
 			warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
 			return 1
 		}
-	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr ' ' '\n' | cut -d: -f2 | sort -u)
+	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
 	else
-		get_pkgname_from_origin "${origins}" | tr ' ' '\n' | sort -u > "${pkgdeps_file}"
+		get_pkgname_from_origin "${origins}" | tr '[:space:]' '\n' | sort -u > "${pkgdeps_file}"
 	fi
 }
 
@@ -687,13 +687,13 @@ pkg_sort() {
 	echo -n 'Checking dependencies' >&2
 	while : ; do
 		echo -n '.' >&2
-		dep_list=${dep_list}$(echo ${pkgs} | tr ' ' '\n' | sed "s/^/${cnt}:/")' '
+		dep_list="${dep_list} $(echo ${pkgs} | tr '[:space:]' '\n' | sed "s/^/${cnt}:/")"
 		pkgs=$(get_depend_pkgnames "${pkgs}")
 		[ -z "${pkgs}" ] && echo 'done.' >&2 && break
 		cnt=$((cnt+1))
 	done
 
-	sorted_dep_list=$(echo ${dep_list} | tr ' ' '\n' | sort -u | sort -t: -k 1nr -k 2 | cut -d: -f 2)
+	sorted_dep_list=$(echo ${dep_list} | tr '[:space:]' '\n' | sort -u | sort -t: -k 1nr -k 2 | cut -d: -f 2)
 	# delete duplicate package
 	dep_list=
 	for pkg in ${sorted_dep_list}; do
@@ -705,7 +705,7 @@ pkg_sort() {
 
 	[ ${opt_depends} -ge 2 ] || {
 		# only pkgs
-		pkgs=$(echo $@ | tr '\n' ' ')
+		pkgs=$(echo $@ | tr '[:space:]' ' ')
 		sorted_dep_list=${dep_list}
 		dep_list=
 		for pkg in ${sorted_dep_list}; do
