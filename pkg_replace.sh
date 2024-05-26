@@ -845,8 +845,7 @@ build_package() {
 
 	xtry ${PKG_MAKE} ${build_args} || return 1
 
-	istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1
-	return 0
+	(istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1) || return 0
 
 }
 
