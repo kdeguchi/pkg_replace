@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240526
+PKG_REPLACE_VERSION=20240527
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1169,12 +1169,12 @@ show_result() {
 
 	for X in ${log_format}; do
 		case ${X#*:} in
-		failed)	istrue ${cnt_failed} || continue ;;
+		failed)		istrue ${cnt_failed} || continue ;;
 		skipped)	istrue ${cnt_skipped} || continue ;;
-		locked)	istrue ${cnt_locked} || continue ;;
+		locked)		istrue ${cnt_locked} || continue ;;
 		removed)	istrue ${cnt_removed} || continue ;;
 		subpackage)	istrue ${cnt_subpackage} || continue ;;
-		*)	istrue ${opt_verbose} || continue ;;
+		*)		istrue ${opt_verbose} || continue ;;
 		esac
 		mask="${mask}${X%%:*}"
 		descr="${descr:+${descr} / }${X}"
