@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (May 26, 2024)"
-.Dd May 26, 2024
+.\" Modified by Ken DEGUCHI (May 29, 2024)"
+.Dd May 29, 2024
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -9,7 +9,7 @@
 .Nd a utility for upgrading installed packages
 .Sh SYNOPSIS
 .Nm
-.Op Fl habBcCddfFiJknNOpPPqrRRuUvVwW
+.Op Fl abBcCddfFhiJknNOpPPqrRRuUvVwW
 .Op Fl \-all
 .Op Fl \-automatic
 .Op Fl \-batch
@@ -47,9 +47,6 @@ command is used to upgrade installed packages.
 The following options are supported:
 .Bl -tag -width "-l FILE"
 .Pp
-.It Fl h
-Show help and exit.
-.Pp
 .It Fl a , Fl \-all
 Do with all the installed packages.
 .Pp
@@ -64,7 +61,7 @@ See also,
 .Fl \-no-backup-package
 .Pp
 .It Fl B , Fl \-no-backup
-Do not backup old packages.
+Do not backup old packages before uninstall old packages.
 .Pp
 .It Fl \-batch
 Run an upgrading process in a batch mode (with BATCH=yes).
@@ -136,6 +133,9 @@ Force to replace packages.
 .It Fl F
 Fetch distfiles or packages, do not replace.
 .Pp
+.It Fl h
+Show help and exit.
+.Pp
 .It Fl i
 Turn on interactive mode.
 .Pp
@@ -182,7 +182,7 @@ Override
 Do not clean
 .Ar PKG_REPLACE_DB_DIR .
 See also,
-.Fl d , Fl dd , Fl R , Fl RR .
+.Fl dd , Fl RR .
 .Pp
 .It Fl \-no-conf
 Do not read the configuration file

@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240527
+PKG_REPLACE_VERSION=20240529
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -845,8 +845,9 @@ build_package() {
 
 	xtry ${PKG_MAKE} ${build_args} || return 1
 
-	(istrue ${opt_package} && xtry ${PKG_MAKE} package || return 1) || return 0
+	istrue ${opt_package} && { xtry ${PKG_MAKE} package || return 1; }
 
+	return 0
 }
 
 set_automatic_flag() {
