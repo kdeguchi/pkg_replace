@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240529
+PKG_REPLACE_VERSION=20240530
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -32,7 +32,7 @@ usage() {
 	        [--clean|--no-clean] [--cleanup|--no-cleanup]
 	        [--config|--no-config] [--force-config|--no-force-config]
 	        [--verbose|--no-verbose]
-	        [--no-backup] [--no-cleandeps] [--no-conf]
+	        [--no-backup] [--no-cleandeps] [--no-configfile]
 	        [-j jobs] [-l file] [-L log-prefix]
 	        [-m make_args] [-M make_env] [-t make_target]
 	        [-X pkgname ] [-x pkgname]
@@ -103,7 +103,7 @@ init_options() {
 	opt_make_env=
 	opt_maxjobs=$(sysctl -n hw.ncpu)
 	opt_new=0
-	opt_no_conf=0
+	opt_no_configfile=0
 	opt_no_execute=0
 	opt_omit_check=0
 	opt_package=0
@@ -226,7 +226,7 @@ parse_options() {
 		no-clean)	opt_no_beforeclean=1; opt_beforeclean=0 ;;
 		no-cleanup)	opt_no_afterclean=1; opt_afterclean=0 ;;
 		no-cleandeps)	opt_no_cleandeps=1; opt_cleandeps=0 ;;
-		no-conf)	opt_no_conf=1 ;;
+		no-configfile)	opt_no_configfile=1 ;;
 		no-config)	opt_no_config=1; opt_config=0 ;;
 		no-force-config)	opt_no_force_config=1; opt_force_config=0 ;;
 		no-verbose)	opt_no_verbose=1; opt_verbose=0 ;;
@@ -499,7 +499,7 @@ cmd_restart_rc() {
 }
 
 load_config() {
-	if ! isempty ${1-} && ! istrue ${opt_no_conf}; then
+	if ! isempty ${1-} && ! istrue ${opt_no_configfile}; then
 		istrue ${opt_verbose} && info "Loading $1"
 		parse_config "$1" || {
 			warn "Fatal error in $1."
