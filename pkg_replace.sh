@@ -232,7 +232,7 @@ parse_options() {
 		no-verbose)	opt_no_verbose=1; opt_verbose=0 ;;
 		verbose)	opt_verbose=1 ;;
 		version)	echo ${PKG_REPLACE_VERSION}; exit 0 ;;
-		*)	usage ;;
+		*)	echo "This option not found."; usage ;;
 		esac
 	done
 
