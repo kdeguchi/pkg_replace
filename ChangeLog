@@ -1,5 +1,9 @@
+20240530
+*Rename option "--no-conf" -> "--no-configfile".
+
 20240526
-*Cleanup options. Add "--no-verbose", "--no-config", and "--no-force-config", etc.
+*Cleanup options.
+ Add "--no-verbose", "--no-config", and "--no-force-config", etc.
 
 20240525
 *Improved the summary message.
