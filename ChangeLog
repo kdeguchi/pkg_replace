@@ -1,3 +1,10 @@
+20240601
+*Change the default behavior of cleaning the PKG_REPLACE_DB_DIR with option
+ "-dd" or "-RR". If you want to clean the PKG_REPLACE_DB_DIR, set option
+ "--cleandeps".
+*The default location of the PKG_REPLACE_DB_DIR has changed from
+ /var/tmp/pkg_replace to /var/db/pkg_replace.
+
 20240530
 *Rename option "--no-conf" -> "--no-configfile".
 

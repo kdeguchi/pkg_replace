@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240530
+PKG_REPLACE_VERSION=20240601
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -74,29 +74,22 @@ prompt_yesno() {
 }
 
 init_options() {
-	opt_afterclean=1
-	opt_no_afterclean=
+	opt_afterclean=1; opt_no_afterclean=
 	opt_all=0
 	opt_automatic=0
-	opt_backup=1
-	opt_no_backup=
+	opt_backup=1; opt_no_backup=
 	opt_batch=0
-	opt_beforeclean=0
-	opt_no_beforeclean=
+	opt_beforeclean=0; opt_no_beforeclean=
 	opt_build=0
-	opt_cleandeps=1
-	opt_no_cleandeps=
-	opt_config=0
-	opt_no_config=
+	opt_cleandeps=0; opt_no_cleandeps=1
+	opt_config=0; opt_no_config=
 	opt_depends=0
 	opt_exclude=
-	opt_force_config=0
-	opt_no_force_config=
+	opt_force_config=0; opt_no_force_config=
 	opt_force=0
 	opt_fetch=0
 	opt_interactive=0
-	opt_keep_backup=0
-	opt_no_keep_backup=
+	opt_keep_backup=0; opt_no_keep_backup=
 	opt_keep_going=0
 	opt_log_prefix=
 	opt_make_args=
@@ -112,8 +105,7 @@ init_options() {
 	opt_required_by=0
 	opt_result=
 	opt_target=
-	opt_verbose=0
-	opt_no_verbose=
+	opt_verbose=0; opt_no_verbose=;
 	opt_version=0
 	opt_unlock=0
 	opt_use_packages=0
@@ -142,7 +134,7 @@ init_variables() {
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
 	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
-	: ${PKG_REPLACE_DB_DIR=${PKG_REPLACE_DB_DIR:-"/var/tmp/pkg_replace"}}
+	: ${PKG_REPLACE_DB_DIR=${PKG_REPLACE_DB_DIR:-"/var/db/pkg_replace"}}
 	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR PKG_BINARY_SUFX PKGCOMPATDIR
 	tmpdir=
 	set_signal_int=
@@ -219,6 +211,7 @@ parse_options() {
 		config)		opt_config=1 ;;
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
+		cleandeps)		opt_no_cleandeps=0; opt_cleandeps=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
 		no-backup)	opt_no_backup=1; opt_backup=0 ;;
@@ -278,13 +271,13 @@ parse_options() {
 	istrue ${opt_no_afterclean} && opt_afterclean=0
 	istrue ${opt_no_backup} && opt_backup=0
 	istrue ${opt_no_beforeclean} && opt_beforeclean=0
-	istrue ${opt_no_cleandeps} && opt_cleandeps=0
 	istrue ${opt_no_config} && opt_config=0
 	istrue ${opt_no_force_config} && opt_force_config=0
 	istrue ${opt_no_keep_backup} && opt_keep_backup=0
 	istrue ${opt_no_verbose} && opt_verbose=0
 
 	istrue ${opt_batch} && { opt_config=0; opt_force_config=0; opt_interactive=0; }
+	istrue ${opt_cleandeps} && { opt_no_cleandeps=0; opt_cleandeps=1; }
 	istrue ${opt_force_config} && opt_config=0
 	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 
