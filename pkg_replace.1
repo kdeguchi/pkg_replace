@@ -19,6 +19,7 @@
 .Op Fl \-cleanup | Fl \-no-cleanup
 .Op Fl \-force-config | Fl \-no-force-config
 .Op Fl \-debug
+.Op Fl \-makedb
 .Op Fl \-no-backup
 .Op Fl \-no-cleandeps
 .Op Fl \-no-configfile
@@ -173,6 +174,10 @@ Specify arguments to append to each
 command.
 Please see section
 .Ar EXAMPLES.
+.Pp
+.It Fl \-makedb
+Create temporary files only in the
+.Ar PKG_REPLACE_DB_DIR .
 .Pp
 .It Fl M Ar ARGS
 Specify arguments to prepend to each

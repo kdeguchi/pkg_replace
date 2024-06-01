@@ -32,7 +32,7 @@ usage() {
 	        [--clean|--no-clean] [--cleanup|--no-cleanup]
 	        [--config|--no-config] [--force-config|--no-force-config]
 	        [--verbose|--no-verbose]
-	        [--no-backup] [--no-cleandeps] [--no-configfile]
+	        [--makedb] [--no-backup] [--no-cleandeps] [--no-configfile]
 	        [-j jobs] [-l file] [-L log-prefix]
 	        [-m make_args] [-M make_env] [-t make_target]
 	        [-X pkgname ] [-x pkgname]
@@ -94,6 +94,7 @@ init_options() {
 	opt_log_prefix=
 	opt_make_args=
 	opt_make_env=
+	opt_makedb=0
 	opt_maxjobs=$(sysctl -n hw.ncpu)
 	opt_new=0
 	opt_no_configfile=0
@@ -213,6 +214,7 @@ parse_options() {
 		cleandeps)		opt_no_cleandeps=0; opt_cleandeps=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
+		makedb)		opt_makedb=1 ;;
 		no-backup)	opt_no_backup=1; opt_backup=0 ;;
 		no-backup-package)	opt_no_keep_backup=1; opt_keep_backup=0 ;;
 		no-clean)	opt_no_beforeclean=1; opt_beforeclean=0 ;;
@@ -278,6 +280,7 @@ parse_options() {
 	istrue ${opt_batch} && { opt_config=0; opt_force_config=0; opt_interactive=0; }
 	istrue ${opt_cleandeps} && { opt_no_cleandeps=0; opt_cleandeps=1; }
 	istrue ${opt_force_config} && opt_config=0
+	istrue ${opt_makedb} && { opt_all=1; opt_depends=2; }
 	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
 
 	optind=$((OPTIND+long_optind))
@@ -1726,7 +1729,6 @@ do_version() {
 	*)
 		echo "${err:+[${err}] }$1${pkg_name:+ -> ${pkg_name}}${pkg_origin:+ (${pkg_origin})}" ;;
 	esac
-
 }
 
 remove_compat_libs() {
@@ -1769,7 +1771,7 @@ main() {
 
 	isempty ${PKG_REPLACE-} || parse_options ${PKG_REPLACE}
 
-	if istrue ${opt_all} || { istrue ${opt_version} && ! istrue $#; }; then
+	if istrue ${opt_all} || istrue ${opt_makedb} || { istrue ${opt_version} && ! istrue $#; }; then
 		set -- '*'
 		[ ${opt_depends} -eq 1 ] && opt_depends=0
 		opt_required_by=0
@@ -1791,6 +1793,8 @@ main() {
 	parse_args ${1+"$@"}
 
 	istrue ${opt_omit_check} || istrue ${opt_version} || pkg_sort ${upgrade_pkgs}
+
+	istrue ${opt_makedb} && exit 0
 
 	if ! isempty ${opt_exclude}; then
 		ARGV=
