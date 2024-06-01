@@ -122,7 +122,6 @@ init_options() {
 }
 
 init_variables() {
-	init_pkgtools
 	: ${MAKE="make"}
 	: ${PORTSDIR="$(${PKG_CONFIG} PORTSDIR)"}
 	: ${OVERLAYS="$(cd "${PORTSDIR}" && ${MAKE} -V OVERLAYS)"}
@@ -174,7 +173,7 @@ init_variables() {
 }
 
 init_pkgtools() {
-	PKG_BIN="pkg"
+	PKG_BIN="pkg-static"
 	PKG_ADD="${PKG_BIN} add"
 	PKG_ANNOTATE="${PKG_BIN} annotate"
 	PKG_CHECK="${PKG_BIN} check"
@@ -465,9 +464,8 @@ run_config_script() {
 }
 
 run_rc_script() {
-	local files= file=
-	files=$(${PKG_QUERY} '%Fp' $1)
-	for file in ${files}; do
+	local file=
+	for file in $(${PKG_QUERY} '%Fp' $1); do
 		case "${file}" in
 		*.sample) ;;
 		*/etc/rc.d/*)
@@ -640,16 +638,16 @@ get_strict_depend_pkgnames() {
 }
 
 get_strict_depend_pkgs(){
-	local origin= origins=
-	local pkgdeps_file=
-	pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
-	istrue ${opt_cleandeps} || { [ -e "${pkgdeps_file}" ] && return 0; }
+	local origin= origins= portdir=
+	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
 	origin=$(get_origin_from_pkgname $1) ||
 		{ echo >&2
 			warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
 			return 1
 		}
-	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
+	portdir="$(get_portdir_from_origin ${origin})"
+	istrue ${opt_cleandeps} || { [ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0; }
+	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
 	else
@@ -1757,7 +1755,9 @@ remove_compat_libs() {
 main() {
 	local ARG= ARGV= jobs=0 pids= cnt= X=
 
-	isempty $(which pkg-static) &&
+	init_pkgtools
+
+	isempty $(which ${PKG_BIN}) &&
 		{ warn 'pkg not found. Please install the pkg command.'; exit 1; }
 
 	init_variables
@@ -1781,7 +1781,7 @@ main() {
 	fi
 
 	[ ${opt_depends} -ge 2 ] && {
-		info "'-dd' or '-RR' option set, this mode is slow!"
+		warn "'-dd' or '-RR' option set, this mode is slow!"
 		istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"
 		create_dir "${PKG_REPLACE_DB_DIR}"
 		set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '
