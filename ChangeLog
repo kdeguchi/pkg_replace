@@ -4,7 +4,8 @@
  "--cleandeps".
 *The default location of the PKG_REPLACE_DB_DIR has changed from
  /var/tmp/pkg_replace to /var/db/pkg_replace.
-*Add option "--makedb". Create temporary files only in the PKG_REPLACE_DB_DIR.
+*Add option "--makedb".
+ Create temporary files only in the PKG_REPLACE_DB_DIR.
 *Cleanup codes.
 
 20240530
