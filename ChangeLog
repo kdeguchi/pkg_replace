@@ -4,6 +4,7 @@
  "--cleandeps".
 *The default location of the PKG_REPLACE_DB_DIR has changed from
  /var/tmp/pkg_replace to /var/db/pkg_replace.
+*Cleanup codes.
 
 20240530
 *Rename option "--no-conf" -> "--no-configfile".
