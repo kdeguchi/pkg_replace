@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240601
+PKG_REPLACE_VERSION=20240602
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -615,13 +615,11 @@ get_strict_depend_pkgnames() {
 
 	for pkg in $1; do
 		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${pkg}.deps"
-		if [ -f "${pkgdeps_file}" ]; then
-			if [ -s "${pkgdeps_file}" ]; then
-				deps=${deps}' '$(cat "${pkgdeps_file}")
-				deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
-			else
-				dels=${dels}' '${pkg}
-			fi
+		if [ -s "${pkgdeps_file}" ]; then
+			deps=${deps}' '$(cat "${pkgdeps_file}")
+			deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
+		else
+			dels=${dels}' '${pkg}
 		fi
 	done
 
@@ -641,16 +639,19 @@ get_strict_depend_pkgnames() {
 }
 
 get_strict_depend_pkgs(){
-	local origin= origins= portdir=
-	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/$1.deps"
-	origin=$(get_origin_from_pkgname $1) ||
-		{ echo >&2
-			warn "'$1' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
-			return 1
-		}
-	portdir="$(get_portdir_from_origin ${origin})"
-	istrue ${opt_cleandeps} || { [ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0; }
-	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
+	local pkg=$1 origin= origins=
+	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/${pkg}.deps"
+
+	istrue ${opt_cleandeps} || { [ -f ${pkgdeps_file} ] && return 0; }
+
+	origin=$(get_origin_from_pkgname ${pkg}) || {
+		echo >&2
+		warn "'$pkg' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
+		return 1
+	}
+
+	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
+
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
 	else

@@ -1,3 +1,6 @@
+20240602
+*Cleanup
+
 20240601
 *Changed the default behavior of cleaning the PKG_REPLACE_DB_DIR with option
  "-dd" or "-RR". If you want to clean the PKG_REPLACE_DB_DIR, set option
