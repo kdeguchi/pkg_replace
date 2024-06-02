@@ -1,5 +1,6 @@
 20240602
-*Cleanup
+*Cleanup codes.
+*Improved man page.
 
 20240601
 *Changed the default behavior of cleaning the PKG_REPLACE_DB_DIR with option
