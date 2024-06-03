@@ -588,7 +588,6 @@ get_depend_pkgnames() {
 	else
 		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
 		[ ${opt_depends} -ge 2 ] && {
-			load_make_vars;
 			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
 		}
 	fi
@@ -1342,12 +1341,10 @@ set_pkginfo_replace() {
 }
 
 make_config_conditional() {
-	load_make_vars
 	{ cd "$1" && ${PKG_MAKE} config-conditional; } || return 1
 }
 
 make_config() {
-	load_make_vars
 	{ cd "$1" && ${PKG_MAKE} config; } || return 1
 }
 
@@ -1365,6 +1362,8 @@ do_install_config() {
 		result=ignored
 		return 0
 	fi
+
+	load_make_vars
 
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1" >&2
@@ -1402,6 +1401,8 @@ do_install() {
 		return 0
 	fi
 
+	load_make_vars
+
 	if ! istrue ${opt_force} && isempty ${pkg_flavor} &&
 		cur_pkgname=$(get_pkgname_from_origin ${pkg_origin}); then
 		info "Skipping '${pkg_origin}' - '${cur_pkgname}' is already installed"
@@ -1433,7 +1434,6 @@ do_install() {
 	fi
 
 	if isempty ${pkg_binary}; then
-		load_make_vars
 		build_package "${pkg_portdir}" || {
 			err="build error"
 			return 1
@@ -1506,6 +1506,8 @@ do_replace_config() {
 		return 0
 	fi
 
+	load_make_vars
+
 	if istrue ${opt_config} && isempty ${pkg_binary}; then
 		printf "\\r--->  Executing make config-conditional: %-${#2}s\\r" "$1" >&2
 		xtry make_config_conditional "${pkg_portdir}" || {
@@ -1551,6 +1553,8 @@ do_replace() {
 		result=${err}
 		return 0
 	}
+
+	load_make_vars
 
 	if get_lock ${cur_pkgname}; then
 		if istrue ${opt_unlock}; then
@@ -1610,7 +1614,6 @@ do_replace() {
 	fi
 
 	if isempty ${pkg_binary}; then
-		load_make_vars
 		load_upgrade_vars "${cur_pkgname}"
 		build_package "${pkg_portdir}" || {
 			err="build error"
