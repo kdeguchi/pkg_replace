@@ -3,13 +3,12 @@
 *Improved man page.
 
 20240601
-*Changed the default behavior of cleaning the PKG_REPLACE_DB_DIR with option
- "-dd" or "-RR". If you want to clean the PKG_REPLACE_DB_DIR, set option
- "--cleandeps".
+*Changed the default behavior of the PKG_REPLACE_DB_DIR with option
+ "-dd" or "-RR". Created files are not deleted but retained.
+ If you want to clean the PKG_REPLACE_DB_DIR, set option "--cleandeps".
 *The default location of the PKG_REPLACE_DB_DIR has changed from
  /var/tmp/pkg_replace to /var/db/pkg_replace.
-*Add option "--makedb".
- Create temporary files only in the PKG_REPLACE_DB_DIR.
+*Add option "--makedb". Create files only in the PKG_REPLACE_DB_DIR.
 *Cleanup codes.
 
 20240530
