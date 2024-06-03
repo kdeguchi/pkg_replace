@@ -646,6 +646,8 @@ get_strict_depend_pkgs(){
 
 	portdir=$(get_portdir_from_origin $1)
 	[ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0
+	pkg_flavor=$(${PKG_QUERY} '%At %Av' $1 | grep flavor | cut -d' ' -f 2)
+	load_make_vars
 	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
 
 	if [ -z "${origins}" ]; then
