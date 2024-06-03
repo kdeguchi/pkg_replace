@@ -598,64 +598,61 @@ get_depend_pkgnames() {
 
 get_strict_depend_pkgnames() {
 	local deps= dels= cut_deps=
-	local pkg= pkgdeps_file=
+	local origin= pkgdeps_file=
 	local jobs=0 pids=
+	local origins=$(get_origin_from_pkgname "$1")
 
-	for pkg in $1; do
+	for origin in ${origins}; do
+		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${origin%/*}_${origin#*/}.deps"
 		while [ $jobs -ge ${opt_maxjobs} ]; do
 			jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 			[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 		done
-		get_strict_depend_pkgs ${pkg} &
+		get_strict_depend_pkgs ${origin} ${pkgdeps_file} &
 		pids="${pids} $!"
 		jobs=$(($(ps -p ${pids} 2>/dev/null | wc -l)-1))
 		[ ${jobs} -lt 0 ] && { jobs=0; pids=; }
 	done
 	wait
 
-	for pkg in $1; do
-		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${pkg}.deps"
+	for origin in ${origins}; do
+		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${origin%/*}_${origin#*/}.deps"
 		if [ -s "${pkgdeps_file}" ]; then
 			deps=${deps}' '$(cat "${pkgdeps_file}")
-			deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
 		else
-			dels=${dels}' '${pkg}
+			dels=${dels}' '${origin}
 		fi
 	done
 
 	deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
 	dels=$(echo ${dels} | tr '[:space:]' '\n' | sort -u)
 
-	for pkg in ${deps}; do
+	for origin in ${deps}; do
 		case " ${dels} " in
-		*[[:space:]]${pkg}[[:space:]]*)	continue ;;
-		*)	cut_deps=${cut_deps}' '${pkg} ;;
+		*[[:space:]]${origin}[[:space:]]*)	continue ;;
+		*)	cut_deps=${cut_deps}' '${origin} ;;
 		esac
 	done
 
-	echo ${cut_deps}
+	echo $(get_pkgname_from_origin "${cut_deps}")
 
 	return 0
 }
 
 get_strict_depend_pkgs(){
-	local pkg=$1 origin= origins=
-	local pkgdeps_file="${PKG_REPLACE_DB_DIR}/${pkg}.deps"
+	local pkgdeps_file=$2
+	local portdir= origins=
 
 	istrue ${opt_cleandeps} || { [ -f ${pkgdeps_file} ] && return 0; }
 
-	origin=$(get_origin_from_pkgname ${pkg}) || {
-		echo >&2
-		warn "'$pkg' has no origin! Check packages dependencies, e.g., \`pkg check -adn\`."
-		return 1
-	}
-
-	origins=$(cd "$(get_portdir_from_origin ${origin})" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
+	portdir=$(get_portdir_from_origin $1)
+	[ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0
+	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
 
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
 	else
-		get_pkgname_from_origin "${origins}" | tr '[:space:]' '\n' | sort -u > "${pkgdeps_file}"
+		echo "${origins}" | tr '[:space:]' '\n' | sort -u > "${pkgdeps_file}"
 	fi
 }
 
@@ -1785,10 +1782,10 @@ main() {
 
 	[ ${opt_depends} -ge 2 ] && {
 		warn "'-dd' or '-RR' option set, this mode is slow!"
-		istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"
+		#istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"
 		create_dir "${PKG_REPLACE_DB_DIR}"
-		set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '
-		set_signal_handlers
+		#set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '
+		#set_signal_handlers
 	}
 
 	parse_args ${1+"$@"}

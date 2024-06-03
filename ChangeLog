@@ -1,4 +1,9 @@
-20240602
+20240604
+*Changed File format created by option "-dd" or "-RR" in the PKG_REPLACE_DB_DIR,
+ i.e. from PKGNAME to PKGORIGIN, because it is expected to behave better when
+ the ports are updates.
+
+20240603
 *Cleanup codes.
 *Improved man page.
 
