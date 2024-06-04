@@ -214,7 +214,7 @@ parse_options() {
 		cleandeps)		opt_no_cleandeps=0; opt_cleandeps=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
-		makedb)		opt_makedb=1 ;;
+		makedb)		opt_makedb=1; opt_cleandeps=1 ;;
 		no-backup)	opt_no_backup=1; opt_backup=0 ;;
 		no-backup-package)	opt_no_keep_backup=1; opt_keep_backup=0 ;;
 		no-clean)	opt_no_beforeclean=1; opt_beforeclean=0 ;;
