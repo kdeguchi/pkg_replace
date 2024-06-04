@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240603
+PKG_REPLACE_VERSION=20240604
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -537,7 +537,12 @@ get_installed_pkgname() {
 }
 
 get_origin_from_pkgname() {
-	${PKG_QUERY} '%o' $1 || return 1
+	${PKG_QUERY} -g '%o' $1 || return 1
+	return 0
+}
+
+get_flavor() {
+	${PKG_QUERY} -g '%At %Av' $1 | grep flavor | cut -d' ' -f 2 || return 1
 	return 0
 }
 
@@ -570,7 +575,7 @@ get_portdir_from_origin() {
 }
 
 get_pkgname_from_origin() {
-	${PKG_QUERY} '%n-%v' $1 || return 1
+	${PKG_QUERY} -g '%n-%v' $1 || return 1
 	return 0
 }
 
@@ -646,14 +651,14 @@ get_strict_depend_pkgs(){
 
 	portdir=$(get_portdir_from_origin $1)
 	[ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0
-	pkg_flavor=$(${PKG_QUERY} '%At %Av' $1 | grep flavor | cut -d' ' -f 2)
+	pkg_flavor=$(get_flavor $1)
 	load_make_vars
-	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -d: -f2 | sort -u)
+	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -s -d: -f2 | sort -u)
 
 	if [ -z "${origins}" ]; then
 		touch "${pkgdeps_file}"
 	else
-		echo "${origins}" | tr '[:space:]' '\n' | sort -u > "${pkgdeps_file}"
+		echo "${origins}" > "${pkgdeps_file}"
 	fi
 }
 
