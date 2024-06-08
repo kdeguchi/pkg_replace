@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240604
+PKG_REPLACE_VERSION=20240608
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -211,7 +211,7 @@ parse_options() {
 		config)		opt_config=1 ;;
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
-		cleandeps)		opt_no_cleandeps=0; opt_cleandeps=1 ;;
+		cleandeps)	opt_no_cleandeps=0; opt_cleandeps=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
 		makedb)		opt_makedb=1; opt_cleandeps=1 ;;
@@ -1792,10 +1792,7 @@ main() {
 
 	[ ${opt_depends} -ge 2 ] && {
 		warn "'-dd' or '-RR' option set, this mode is slow!"
-		#istrue "${opt_cleandeps}" && remove_dir "${PKG_REPLACE_DB_DIR}"
 		create_dir "${PKG_REPLACE_DB_DIR}"
-		#set_signal_exit=${set_signal_exit}'istrue "${opt_cleandeps}" && { wait; remove_dir "${PKG_REPLACE_DB_DIR}"; }; '
-		#set_signal_handlers
 	}
 
 	parse_args ${1+"$@"}
