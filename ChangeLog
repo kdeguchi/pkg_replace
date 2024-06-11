@@ -1,3 +1,7 @@
+20240611
+*Fix error message in get_strict_depend_pkgs().
+*Cleanup codes.
+
 20240603
 *Changed File format created by option "-dd" or "-RR" in the PKG_REPLACE_DB_DIR,
  i.e. from PKGNAME to PKGORIGIN, because it is expected to behave better when

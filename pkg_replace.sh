@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240608
+PKG_REPLACE_VERSION=20240611
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -316,6 +316,8 @@ parse_args() {
 				pkg_origin=${pkg_portdir#${pkg_portdir%/*/${pkg_portdir##*/}}/}
 			elif pkg_portdir=$(get_portdir_from_origin ${pkg_origin}); then
 				pkg_origin=${pkg_origin}
+			elif pkg_name=$(get_pkgname_from_origin ${pkg_origin}); then
+				pkg_portdir=$(get_portdir_from_origin ${pkg_origin})
 			else
 				warn "No such file or package: ${pkg_portdir}"
 				continue
@@ -638,7 +640,7 @@ get_strict_depend_pkgnames() {
 		esac
 	done
 
-	echo $(get_pkgname_from_origin "${cut_deps}")
+	isempty ${cut_deps} || echo $(get_pkgname_from_origin "${cut_deps}")
 
 	return 0
 }
