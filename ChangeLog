@@ -1,3 +1,6 @@
+20240728
+*Improved man page.
+
 20240611
 *Fix error message in get_strict_depend_pkgs().
 *Cleanup codes.

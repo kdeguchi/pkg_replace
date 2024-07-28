@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (June  2, 2024)"
-.Dd June  2, 2024
+.\" Modified by Ken DEGUCHI (July 28, 2024)"
+.Dd July 28, 2024
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -303,24 +303,49 @@ when the specified packages have the libraries with the same name as the one in
 This may be useful when there are errors due to a mixture of old and new libraries.
 .Pp
 .El
+.Sh VARIABLES
+See also,
+.Va pkg_replace.conf .
+.Bl -tag -width ".Ev XXXXXXXXXXXXXXXXXX"
+.It Ev Va PACKAGEROOT
+Default is
+.Va https://pkg.FreeBSD.org .
+.It Ev Va PKGCOMPATDIR
+Defaut location is
+.Va /usr/local/lib/compat/pkg .
+.It Ev Va PKGREPOSITORY
+Default location is
+.Va /var/cache/pkg/All .
+.It Ev Va PKG_REPLACE_DB_DIR
+Default location is
+.Va /var/db/pkg_replace .
+.El
+.Pp
 .Sh EXAMPLES
 .Bl -bullet
 .It
 pkgname and glob examples:
+.Ar name-version ,
+.Ar name
+and
+.Ar shell glob .
 .Pp
-.Dl name-version, name and shell glob.
 .Dl glib-2.36.3_2, glib and 'glib*' or glib\e*
 .Pp
 .It
 pkgorigin examples:
+.Ar pkgorigin
+and
+.Ar pkgorigin@flavor .
 .Pp
-.Dl devel/glib20
+.Dl devel/glib20 and graphics/py-cairo@py37
 .Pp
 .It
-Path:
+Path: Absolute and relative paths are allowed.
 .Pp
-.Dl Absolute and relative paths are allowed.
-.Pp
+.Dl pkg_replace glib=../glib20-new
+.Dl or
+.Dl pkg_replace glib=/home/foo/ports/glib20
 .It
 Install
 .Ar glib :
@@ -330,7 +355,7 @@ Install
 Install
 .Ar py-cairo
 with
-.Ar FLAVOR=py37
+.Ar FLAVOR=py37 :
 .Pp
 .Dl pkg_replace -N graphics/py-cairo@py37
 .It
@@ -361,7 +386,7 @@ with
 .It
 Replace
 .Ar XFree86-libraries
-with pkgorigin
+with pkgorigin:
 .Ar x11/xorg-libraries:
 .Pp
 .Dl pkg_replace XFree86-libraries=x11/xorg-libraries
@@ -377,10 +402,10 @@ package:
 Replace
 .Ar graphics/py-cairo
 with
-.Ar FLAVOR=py37
+.Ar FLAVOR=py37 :
 .Pp
 .Dl pkg_replace -m FLAVOR=py37 graphics/py-cairo
-or
+.Dl or
 .Dl pkg_replace graphics/py-cairo@py37
 .It
 Do
