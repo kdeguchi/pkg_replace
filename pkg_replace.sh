@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20240611
+PKG_REPLACE_VERSION=20240819
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -1113,7 +1113,7 @@ parse_moved() {
 			break
 		fi
 
-		portdir=$(get_portdir_from_origin ${new_origin})
+		portdir=$(get_portdir_from_origin ${new_origin%@*})
 		! isempty ${portdir} && eval ${ret}=\${new_origin} && break
 
 	done
@@ -1139,7 +1139,7 @@ trace_moved() {
 		warn "'$1' has moved to '${moved}':"
 		warn "    ${reason}"
 		pkg_origin=${moved}
-		pkg_portdir=$(get_portdir_from_origin ${moved})
+		pkg_portdir=$(get_portdir_from_origin ${moved%@*})
 		return 0 ;;
 	esac
 }
