@@ -761,7 +761,7 @@ create_tmpdir() {
 clean_tmpdir() {
 	if ! isempty ${tmpdir}; then
 		try rmdir "${tmpdir}" ||
-			warn "Couldn't remove the working direcotry: ${tmpdir}"
+			warn "Couldn't remove the working directory: ${tmpdir}"
 		tmpdir=
 	fi
 }
@@ -1700,7 +1700,7 @@ do_replace() {
 	clean_libs ||
 		warn "Failed to remove the preserved shared libraries."
 	remove_dir "${pkg_tmpdir}" ||
-		warn "Couldn't remove the working direcotry."
+		warn "Couldn't remove the working directory."
 
 	case ${result} in
 	done)
