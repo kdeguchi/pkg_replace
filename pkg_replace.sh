@@ -761,7 +761,7 @@ create_tmpdir() {
 clean_tmpdir() {
 	if ! isempty ${tmpdir}; then
 		try rmdir "${tmpdir}" ||
-			warn "Couldn't remove the working direcotry: ${tmpdir}"
+			warn "Couldn't remove the working directory: ${tmpdir}"
 		tmpdir=
 	fi
 }
@@ -919,7 +919,7 @@ install_package() {
 	info "Installing '$1'"
 
 	istrue ${opt_force} && install_args="-DFORCE_PKG_REGISTER"
-	istrue ${opt_batch} && install_args="${_install_args} -DBATCH"
+	istrue ${opt_batch} && install_args="${install_args} -DBATCH"
 
 	cd "$1" || return 1
 	xtry ${PKG_MAKE} ${install_args} reinstall || return 1
@@ -1700,7 +1700,7 @@ do_replace() {
 	clean_libs ||
 		warn "Failed to remove the preserved shared libraries."
 	remove_dir "${pkg_tmpdir}" ||
-		warn "Couldn't remove the working direcotry."
+		warn "Couldn't remove the working directory."
 
 	case ${result} in
 	done)
