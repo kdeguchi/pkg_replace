@@ -1,3 +1,8 @@
+20260115
+*Fix typo
+*Fix issue with --batch mode
+Thanks Dmitry!
+
 20240819
 *Improved handling of moved ports.
 
