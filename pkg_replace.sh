@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260115
+PKG_REPLACE_VERSION=20260119
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -132,11 +132,12 @@ init_variables() {
 	: ${PKG_BINARY_SUFX="$(cd "${PORTSDIR}" && ${MAKE} -V PKG_SUFX -f "Mk/bsd.port.mk")"}
 	: ${PKG_FETCH="$(cd "${PORTSDIR}" && ${MAKE} -V FETCH_CMD -f "Mk/bsd.port.mk" || echo fetch)"}
 	: ${PKG_BACKUP_DIR=${PKGREPOSITORY}}
-	: ${PKG_TMPDIR=${TMPDIR:-"/var/tmp"}}
+	: ${PKG_TMPDIR=${TMPDIR:-"/tmp"}}
 	: ${PKGCOMPATDIR="%%PKGCOMPATDIR%%"}
 	: ${PKG_REPLACE_DB_DIR=${PKG_REPLACE_DB_DIR:-"/var/db/pkg_replace"}}
 	export PORTSDIR OVERLAYS PKG_DBDIR PKG_TMPDIR PKG_BINARY_SUFX PKGCOMPATDIR
 	tmpdir=
+	tmpdbdir=
 	set_signal_int=
 	set_signal_exit=
 	optind=1
@@ -533,26 +534,41 @@ load_env_vars() {
 	ARCH=$3
 }
 
+get_query_from_file() {
+	[ -f "$1" ] || return 1
+	cat "$1"
+	return 0
+}
+
 get_installed_pkgname() {
-	${PKG_QUERY} -g '%n-%v' $1 || return 1
+	local file="${tmpdbdir}/$1.installed"
+	get_query_from_file "${file}" && return 0
+	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" || return 1
 	return 0
 }
 
 get_origin_from_pkgname() {
-	${PKG_QUERY} -g '%o' $1 || return 1
+	local file="${tmpdbdir}/$1.origin"
+	get_query_from_file "${file}" && return 0
+	${PKG_QUERY} -g '%o' $1 | tee "${file}" || return 1
 	return 0
 }
 
 get_flavor() {
-	${PKG_QUERY} -g '%At %Av' $1 | grep flavor | cut -d' ' -f 2 || return 1
+	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').flavor"
+	get_query_from_file "${file}" && return 0
+	${PKG_QUERY} -g '%At %Av' $1 | grep flavor | cut -d' ' -f 2 | tee "${file}" || return 1
 	return 0
 }
 
 get_pkgname_from_portdir() {
-	local pkgname=
+	local pkgname= file=
 	[ -d "$1" ] || return 1
 	load_make_vars
-	pkgname=$( cd "$1" && ${PKG_MAKE} -V PKGNAME ) || return 1
+	[ -z ${pkg_flavor} ] && file="${tmpdbdir}/$(echo ${1} | tr '/' '_').pkgname" ||
+		file="${tmpdbdir}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
+	get_query_from_file "${file}" && return 0
+	pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") || return 1
 	case ${pkgname} in
 	''|-)	return 1 ;;
 	*)	echo ${pkgname}; return 0 ;;
@@ -577,7 +593,9 @@ get_portdir_from_origin() {
 }
 
 get_pkgname_from_origin() {
-	${PKG_QUERY} -g '%n-%v' $1 || return 1
+	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').origin"
+	get_query_from_file "${file}" && return 0
+	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" || return 1
 	return 0
 }
 
@@ -593,7 +611,7 @@ get_depend_pkgnames() {
 			fi
 		done
 	else
-		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
+		deps=$( ${PKG_QUERY} '%dn-%dv' $1 | sort -u )
 		[ ${opt_depends} -ge 2 ] && {
 			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
 		}
@@ -690,7 +708,8 @@ get_depend_binary_pkgnames() {
 
 get_lock() {
 	local lock=
-	lock=$(${PKG_QUERY} '%k' $1) || return 1
+	local file="${tmpdbdir}/$1.lock"
+	lock=$( get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee ${file}) ) || return 1
 	case ${lock} in
 	0)	return 1 ;;
 	1)	return 0 ;;
@@ -760,6 +779,7 @@ create_tmpdir() {
 
 clean_tmpdir() {
 	if ! isempty ${tmpdir}; then
+		try remove_dir ${tmpdbdir}
 		try rmdir "${tmpdir}" ||
 			warn "Couldn't remove the working directory: ${tmpdir}"
 		tmpdir=
@@ -1781,6 +1801,13 @@ main() {
 
 	isempty ${PKG_REPLACE-} || parse_options ${PKG_REPLACE}
 
+	create_tmpdir && init_result || exit 1
+	tmpdbdir=${tmpdir}/db
+	create_dir ${tmpdbdir}
+	set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
+	set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir; '
+	set_signal_handlers
+
 	if istrue ${opt_all} || istrue ${opt_makedb} || { istrue ${opt_version} && ! istrue $#; }; then
 		set -- '*'
 		[ ${opt_depends} -eq 1 ] && opt_depends=0
@@ -1846,12 +1873,6 @@ main() {
 		wait
 		tput cd
 	else
-		create_tmpdir && init_result || exit 1
-
-		set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
-		set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir; '
-		set_signal_handlers
-
 		# check installed package
 		for X in ${upgrade_pkgs}; do
 			get_installed_pkgname $X > /dev/null 2>&1 || {
