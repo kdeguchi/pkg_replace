@@ -565,7 +565,7 @@ get_pkgname_from_portdir() {
 	local pkgname= file=
 	[ -d "$1" ] || return 1
 	load_make_vars
-	[ -z ${pkg_flavor} ] && file="${tmpdbdir}/$(echo ${1} | tr '/' '_').pkgname" ||
+	isempty ${pkg_flavor} && file="${tmpdbdir}/$(echo ${1} | tr '/' '_').pkgname" ||
 		file="${tmpdbdir}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
 	get_query_from_file "${file}" && return 0
 	pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") || return 1
