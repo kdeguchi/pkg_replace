@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260119
+PKG_REPLACE_VERSION=20260120
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -611,7 +611,7 @@ get_depend_pkgnames() {
 			fi
 		done
 	else
-		deps=$( ${PKG_QUERY} '%dn-%dv' $1 | sort -u )
+		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
 		[ ${opt_depends} -ge 2 ] && {
 			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
 		}
@@ -642,9 +642,9 @@ get_strict_depend_pkgnames() {
 	for origin in ${origins}; do
 		pkgdeps_file="${PKG_REPLACE_DB_DIR}/${origin%/*}_${origin#*/}.deps"
 		if [ -s "${pkgdeps_file}" ]; then
-			deps=${deps}' '$(cat "${pkgdeps_file}")
+			deps="${deps} $(get_query_from_file "${pkgdeps_file}")"
 		else
-			dels=${dels}' '${origin}
+			dels="${dels} ${origin}"
 		fi
 	done
 
@@ -654,7 +654,7 @@ get_strict_depend_pkgnames() {
 	for origin in ${deps}; do
 		case " ${dels} " in
 		*[[:space:]]${origin}[[:space:]]*)	continue ;;
-		*)	cut_deps=${cut_deps}' '${origin} ;;
+		*)	cut_deps="${cut_deps} ${origin}" ;;
 		esac
 	done
 
@@ -675,7 +675,7 @@ get_strict_depend_pkgs(){
 	load_make_vars
 	origins=$(cd "${portdir}" && ${PKG_MAKE} -V BUILD_DEPENDS -V PATCH_DEPENDS -V FETCH_DEPENDS -V EXTRACT_DEPENDS -V PKG_DEPENDS | tr '[:space:]' '\n' | cut -s -d: -f2 | sort -u)
 
-	if [ -z "${origins}" ]; then
+	if isempty "${origins}"; then
 		touch "${pkgdeps_file}"
 	else
 		echo "${origins}" > "${pkgdeps_file}"
@@ -717,7 +717,7 @@ get_lock() {
 }
 
 get_subpackage() {
-	[ -z $(${PKG_ANNOTATE} --show --quiet $1 subpackage) ] && return 1
+	isempty $(${PKG_ANNOTATE} --show --quiet $1 subpackage) && return 1
 	return 0
 }
 
@@ -736,7 +736,7 @@ pkg_sort() {
 		echo -n '.' >&2
 		dep_list="${dep_list} $(echo ${pkgs} | tr '[:space:]' '\n' | sed "s/^/${cnt}:/")"
 		pkgs=$(get_depend_pkgnames "${pkgs}")
-		[ -z "${pkgs}" ] && echo 'done.' >&2 && break
+		isempty "${pkgs}" && echo 'done.' >&2 && break
 		cnt=$((cnt+1))
 	done
 
