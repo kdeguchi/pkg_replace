@@ -567,8 +567,7 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_').pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
-	[ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" && return 0
-	pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") || return 1
+	pkgname=$([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" || cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
 	case ${pkgname} in
 	''|-)	return 1 ;;
 	*)	echo ${pkgname}; return 0 ;;
