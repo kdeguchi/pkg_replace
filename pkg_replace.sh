@@ -565,9 +565,9 @@ get_pkgname_from_portdir() {
 	local pkgname= file=
 	[ -d "$1" ] || return 1
 	load_make_vars
-	isempty ${pkg_flavor} && file="${tmpdbdir}/$(echo ${1} | tr '/' '_').pkgname" ||
-		file="${tmpdbdir}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
-	get_query_from_file "${file}" && return 0
+	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_').pkgname" ||
+		file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
+	[ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" && return 0
 	pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") || return 1
 	case ${pkgname} in
 	''|-)	return 1 ;;
@@ -925,7 +925,7 @@ remove_preserved_files() {
 				*[[:space:]]${file}[[:space:]]*)
 					istrue ${opt_verbose} &&
 						info "Remove the same name library: '${PKGCOMPATDIR}/${file##*/}'"
-					rm -f ${PKGCOMPATDIR}/${file##*/} ;;
+					try rm -f ${PKGCOMPATDIR}/${file##*/} ;;
 				esac
 				;;
 			esac
@@ -1808,6 +1808,8 @@ main() {
 	set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir; '
 	set_signal_handlers
 
+	create_dir "${PKG_REPLACE_DB_DIR}"
+
 	if istrue ${opt_all} || istrue ${opt_makedb} || { istrue ${opt_version} && ! istrue $#; }; then
 		set -- '*'
 		[ ${opt_depends} -eq 1 ] && opt_depends=0
@@ -1821,7 +1823,6 @@ main() {
 
 	[ ${opt_depends} -ge 2 ] && {
 		warn "'-dd' or '-RR' option set, this mode is slow!"
-		create_dir "${PKG_REPLACE_DB_DIR}"
 	}
 
 	parse_args ${1+"$@"}
