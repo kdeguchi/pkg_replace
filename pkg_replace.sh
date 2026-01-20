@@ -567,7 +567,7 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_').pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
-	pkgname=$([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" || cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
+	pkgname=$( ([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}") || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
 	case ${pkgname} in
 	''|-)	return 1 ;;
 	*)	echo ${pkgname}; return 0 ;;
@@ -579,15 +579,13 @@ get_overlay_dir() {
 	local IFS='	 
 '
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		get_pkgname_from_portdir ${overlay}/$1 > /dev/null 2>&1 || continue
-		echo ${overlay} && return 0
+		[ -f "${overlay}/$1/Makefile" ] && echo ${overlay} && return 0
 	done
 	return 1
 }
 
 get_portdir_from_origin() {
-	local portdir=
-	portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
+	echo "$(get_overlay_dir "$1")/$1" && return 0
 	return 1
 }
 
@@ -778,7 +776,7 @@ create_tmpdir() {
 
 clean_tmpdir() {
 	if ! isempty ${tmpdir}; then
-		try remove_dir ${tmpdbdir}
+		remove_dir ${tmpdbdir}
 		try rmdir "${tmpdir}" ||
 			warn "Couldn't remove the working directory: ${tmpdir}"
 		tmpdir=
