@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260120
+PKG_REPLACE_VERSION=20260121
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -536,34 +536,34 @@ load_env_vars() {
 
 get_query_from_file() {
 	[ -f "$1" ] || return 1
-	cat "$1"
-	return 0
+	cat "$1" && return 0
+	return 1
 }
 
 get_installed_pkgname() {
 	local file="${tmpdbdir}/$1.installed"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" || return 1
-	return 0
+	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" && return 0
+	return 1
 }
 
 get_origin_from_pkgname() {
 	local file="${tmpdbdir}/$1.origin"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%o' $1 | tee "${file}" || return 1
-	return 0
+	${PKG_QUERY} -g '%o' $1 | tee "${file}" && return 0
+	return 1
 }
 
 get_flavor() {
 	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').flavor"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%At %Av' $1 | grep flavor | cut -d' ' -f 2 | tee "${file}" || return 1
-	return 0
+	${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}" && return 0
+	return 1
 }
 
 get_pkgname_from_portdir() {
 	local pkgname= file=
-	[ -d "$1" ] || return 1
+	[ -f "${1}/Makefile" ] || return 1
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_').pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
@@ -592,8 +592,8 @@ get_portdir_from_origin() {
 get_pkgname_from_origin() {
 	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').origin"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" || return 1
-	return 0
+	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" && return 0
+	return 1
 }
 
 get_depend_pkgnames() {
@@ -681,20 +681,20 @@ get_strict_depend_pkgs(){
 
 get_binary_pkgname() {
 	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
-	${PKG_QUERY} -F $1 '%n-%v' || return 1
-	return 0
+	${PKG_QUERY} -F $1 '%n-%v' && return 0
+	return 1
 }
 
 get_binary_origin() {
 	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
-	${PKG_QUERY} -F $1 '%o' || return 1
-	return 0
+	${PKG_QUERY} -F $1 '%o' && return 0
+	return 1
 }
 
 get_binary_flavor(){
 	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
-	${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2
-	return 0
+	( ${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2 ) && return )0
+	return 1
 }
 
 get_depend_binary_pkgnames() {
@@ -1287,7 +1287,7 @@ set_pkginfo_replace() {
 	pkg_unlock=0
 
 	if isempty ${pkg_flavor}; then
-		pkg_flavor=$(${PKG_ANNOTATE} --quiet --show "$1" flavor)
+		pkg_flavor=$(get_flavor $1")
 	fi
 
 	for X in ${replace_pkgs}; do
