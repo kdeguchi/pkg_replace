@@ -574,20 +574,13 @@ get_pkgname_from_portdir() {
 	esac
 }
 
-get_overlay_dir() {
+get_portdir_from_origin() {
 	local overlay=
 	local IFS='	 
 '
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
-		get_pkgname_from_portdir ${overlay}/$1 > /dev/null 2>&1 || continue
-		echo ${overlay} && return 0
+		[ -f ${overlay}/$1/Makefile ] && echo "${overlay}/$1" && return 0
 	done
-	return 1
-}
-
-get_portdir_from_origin() {
-	local portdir=
-	portdir="$(get_overlay_dir "$1")/$1" && echo ${portdir} && return 0
 	return 1
 }
 
