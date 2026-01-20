@@ -543,21 +543,21 @@ get_query_from_file() {
 get_installed_pkgname() {
 	local file="${tmpdbdir}/$1.installed"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" && return 0
+	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_origin_from_pkgname() {
 	local file="${tmpdbdir}/$1.origin"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%o' $1 | tee "${file}" && return 0
+	(${PKG_QUERY} -g '%o' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_flavor() {
 	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').flavor"
 	get_query_from_file "${file}" && return 0
-	${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}" && return 0
+	(${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}") && return 0
 	return 1
 }
 
@@ -592,7 +592,7 @@ get_portdir_from_origin() {
 get_pkgname_from_origin() {
 	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').origin"
 	get_query_from_file "${file}" && return 0
-	${PKG_QUERY} -g '%n-%v' $1 | tee "${file}" && return 0
+	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
 	return 1
 }
 
@@ -693,20 +693,20 @@ get_binary_origin() {
 
 get_binary_flavor(){
 	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
-	( ${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2 ) && return )0
+	(${PKG_QUERY} -F $1 '%At %Av' | grep flavor | cut -d' ' -f 2) && return 0
 	return 1
 }
 
 get_depend_binary_pkgnames() {
 	[ -e $1 ] || { warn "No such file '$1'"; return 1; }
-	${PKG_QUERY} -F $1 '%dn-%dv:%do' || return 1
-	return 0
+	${PKG_QUERY} -F $1 '%dn-%dv:%do' && return 0
+	return 1
 }
 
 get_lock() {
 	local lock=
 	local file="${tmpdbdir}/$1.lock"
-	lock=$( get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee ${file}) ) || return 1
+	lock=$(get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee ${file})) || return 1
 	case ${lock} in
 	0)	return 1 ;;
 	1)	return 0 ;;
@@ -1287,7 +1287,7 @@ set_pkginfo_replace() {
 	pkg_unlock=0
 
 	if isempty ${pkg_flavor}; then
-		pkg_flavor=$(get_flavor $1")
+		pkg_flavor=$(get_flavor "$1")
 	fi
 
 	for X in ${replace_pkgs}; do
