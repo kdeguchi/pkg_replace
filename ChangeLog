@@ -1,6 +1,7 @@
 20260120
 *Cleanup code
 *Save pkgname cache files in PKG_REPLACE_DB_DIR
+*Remove function get_overlay_dir()
 
 20260119
 *Improved execution speed using cache files
