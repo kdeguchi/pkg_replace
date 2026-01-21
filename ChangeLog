@@ -2,6 +2,11 @@
 *Fix typo
 *Cleanup code
 *Use md5 hashes as cache file names
+*Renamed options:
+ "--cleandeps" and "--no-cleandeps" have been renamed by "--updatedb" and
+ "--no-updatedb", respectively.
+*Add option:
+ "--cleandb" option clean files in the PKG_REPLACE_DB_DIR.
 
 20260120
 *Cleanup code

@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (August  8, 2024)"
-.Dd August  8, 2024
+.\" Modified by Ken DEGUCHI (January 21, 2026)"
+.Dd January 21, 2026
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -16,11 +16,12 @@
 .Op Fl \-backup-package | Fl \-no-backup-package
 .Op Fl \-clean | Fl \-no-clean
 .Op Fl \-cleanup | Fl \-no-cleanup
-.Op Fl \-cleandeps | Fl \-no-cleandeps
 .Op Fl \-config | Fl \-no-config
 .Op Fl \-force-config | Fl \-no-force-config
 .Op Fl \-debug
 .Op Fl \-makedb
+.Op Fl \-cleandb
+.Op Fl \-updatedb | Fl \-no-updatedb
 .Op Fl \-no-backup
 .Op Fl \-no-configfile
 .Op Fl \-vebose | Fl \-no-verbose
@@ -87,26 +88,6 @@ before build.
 See also,
 .Fl w , Fl \-no-clean .
 .Pp
-.It Fl \-cleandeps
-Clean files that record dependencies in the
-.Ar PKG_REPLACE_DB_DIR .
-This option overrides
-.Fl \-no-cleandeps .
-By default,
-.Nm
-do not clean files in the
-.Ar PKG_REPLACE_DB_DIR .
-This option should be useful when the dependencies of packages are new or modified.
-See also,
-.Fl dd , Fl RR .
-.It Fl \-cleanup
-Do
-.Dq Li make clean
-after build.
-This is the default.
-See also,
-.Fl W , Fl \-no-cleanup .
-.Pp
 .It Fl d , Fl R
 In addition to the specified packages,
 replace all packages that required by those packages as well.
@@ -124,7 +105,7 @@ directory to run as fast as possible.
 See config file,
 .Ar pkg_replace.conf.sample .
 If you set
-.Fl \-cleandeps ,
+.Fl \-cleandb ,
 .Nm
 clean these files in the
 .Ar PKG_REPLACE_DB_DIR .
@@ -184,10 +165,44 @@ Please see section
 Create files that record dependencies of packages in the
 .Ar PKG_REPLACE_DB_DIR .
 .Pp
+.It Fl \-cleandb
+Clean files that record dependencies in the
+.Ar PKG_REPLACE_DB_DIR .
+This option should be useful when the dependencies of packages are new or modified.
+See also,
+.Fl dd , Fl RR .
+.Pp
+.It Fl \-updatedb
+Update files that record dependencies in the
+.Ar PKG_REPLACE_DB_DIR .
+This is the default.
+See also,
+.Fl dd , Fl RR .
+.Pp
+.It Fl \-no-updatedb
+Do not update the
+.Ar PKG_REPLACE_DB_DIR .
+This option overrides
+.Fl \-updatedb
+and
+.Nm
+do not update files in the
+.Ar PKG_REPLACE_DB_DIR .
+See also,
+.Fl dd , Fl RR .
+.Pp
 .It Fl M Ar ARGS
 Specify arguments to prepend to each
 .Xr make 1
 command.
+.Pp
+.It Fl \-cleanup
+Do
+.Dq Li make clean
+after build.
+This is the default.
+See also,
+.Fl W , Fl \-no-cleanup .
 .Pp
 .It Fl n
 Do not actually replace any packages.
@@ -195,13 +210,6 @@ Do not actually replace any packages.
 Do not keep backup packages the old versions.
 Override
 .Fl b .
-.Pp
-.It Fl \-no-cleandeps
-Do not clean the
-.Ar PKG_REPLACE_DB_DIR .
-This is the default.
-See also,
-.Fl dd , Fl RR .
 .Pp
 .It Fl \-no-configfile
 Do not read the configuration file

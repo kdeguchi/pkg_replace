@@ -30,7 +30,7 @@ usage() {
 	        [--all] [--automatic] [--batch] [--debug] [--version]
 	        [--backup-package|--no-backup-package]
 	        [--clean|--no-clean] [--cleanup|--no-cleanup]
-	        [--makedb] [--cleandeps|--no-cleandeps]
+	        [--makedb] [--cleandb] [--updatedb|--no-updatedb]
 	        [--config|--no-config] [--force-config|--no-force-config]
 	        [--verbose|--no-verbose] [--no-backup] [--no-configfile]
 	        [-j jobs] [-l file] [-L log-prefix]
@@ -81,7 +81,8 @@ init_options() {
 	opt_batch=0
 	opt_beforeclean=0; opt_no_beforeclean=
 	opt_build=0
-	opt_cleandeps=0; opt_no_cleandeps=1
+	opt_cleandb=0
+	opt_updatedb=1; opt_no_updatedb=0
 	opt_config=0; opt_no_config=
 	opt_depends=0
 	opt_exclude=
@@ -212,15 +213,16 @@ parse_options() {
 		config)		opt_config=1 ;;
 		clean)		opt_beforeclean=1 ;;
 		cleanup)	opt_afterclean=1 ;;
-		cleandeps)	opt_no_cleandeps=0; opt_cleandeps=1 ;;
+		cleandb)	opt_cleandb=1 ;;
+		updatedb)	opt_no_updatedb=0; opt_updatedb=1 ;;
 		debug)		set -x ;;
 		force-config)	opt_force_config=1 ;;
-		makedb)		opt_makedb=1; opt_cleandeps=1 ;;
+		makedb)		opt_makedb=1; opt_updatedb=1 ;;
 		no-backup)	opt_no_backup=1; opt_backup=0 ;;
 		no-backup-package)	opt_no_keep_backup=1; opt_keep_backup=0 ;;
 		no-clean)	opt_no_beforeclean=1; opt_beforeclean=0 ;;
 		no-cleanup)	opt_no_afterclean=1; opt_afterclean=0 ;;
-		no-cleandeps)	opt_no_cleandeps=1; opt_cleandeps=0 ;;
+		no-updatedb)	opt_no_updatedb=1; opt_updatedb=0 ;;
 		no-configfile)	opt_no_configfile=1 ;;
 		no-config)	opt_no_config=1; opt_config=0 ;;
 		no-force-config)	opt_no_force_config=1; opt_force_config=0 ;;
@@ -279,7 +281,7 @@ parse_options() {
 	istrue ${opt_no_verbose} && opt_verbose=0
 
 	istrue ${opt_batch} && { opt_config=0; opt_force_config=0; opt_interactive=0; }
-	istrue ${opt_cleandeps} && { opt_no_cleandeps=0; opt_cleandeps=1; }
+	istrue ${opt_no_updatedb} && { opt_no_updatedb=1; opt_updatedb=0; }
 	istrue ${opt_force_config} && opt_config=0
 	istrue ${opt_makedb} && { opt_all=1; opt_depends=2; }
 	istrue ${opt_omit_check} && { opt_keep_going=1; opt_depends=0; }
@@ -543,14 +545,14 @@ get_query_from_file() {
 }
 
 get_installed_pkgname() {
-  local file="${tmpdbdir}/$(md5 -s "$1").installed"
+	local file="${tmpdbdir}/$(md5 -s "$1").installed"
 	get_query_from_file "${file}" && return 0
 	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_origin_from_pkgname() {
-  local file="${tmpdbdir}/$(md5 -s "$1" ).origin"
+	local file="${tmpdbdir}/$(md5 -s "$1" ).origin"
 	get_query_from_file "${file}" && return 0
 	(${PKG_QUERY} -g '%o' $1 | tee "${file}") && return 0
 	return 1
@@ -667,7 +669,7 @@ get_strict_depend_pkgs(){
 	local pkgdeps_file=$2
 	local portdir= origins=
 
-	istrue ${opt_cleandeps} || { [ -f ${pkgdeps_file} ] && return 0; }
+	istrue ${opt_no_updatedb} || { [ -f ${pkgdeps_file} ] && return 0; }
 
 	portdir=$(get_portdir_from_origin $1)
 	[ "${pkgdeps_file}" -nt "${portdir}/Makefile" ] && return 0
@@ -708,7 +710,7 @@ get_depend_binary_pkgnames() {
 
 get_lock() {
 	local lock=
-  local file="${tmpdbdir}/$(md5 -s "$1").lock"
+	local file="${tmpdbdir}/$(md5 -s "$1").lock"
 	lock=$(get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee "${file}")) || return 1
 	case ${lock} in
 	0)	return 1 ;;
@@ -1801,6 +1803,23 @@ main() {
 
 	isempty ${PKG_REPLACE-} || parse_options ${PKG_REPLACE}
 
+	if istrue ${opt_all} || istrue ${opt_makedb} || { istrue ${opt_version} && ! istrue $#; }; then
+		set -- '*'
+		[ ${opt_depends} -eq 1 ] && opt_depends=0
+		opt_required_by=0
+	elif ! isempty ${opt_remove_compat_libs}; then
+		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs})
+		! istrue $# && exit 0
+	elif istrue ${opt_cleandb}; then
+    find ${PKG_REPLACE_DB_DIR} -type f -delete && exit 0
+	elif ! istrue $#; then
+		usage
+	fi
+
+	[ ${opt_depends} -ge 2 ] && {
+		warn "'-dd' or '-RR' option set, this mode is slow!"
+	}
+
 	create_tmpdir && init_result || exit 1
 	tmpdbdir=${tmpdir}/db
 	create_dir ${tmpdbdir}
@@ -1809,21 +1828,6 @@ main() {
 	set_signal_handlers
 
 	create_dir "${PKG_REPLACE_DB_DIR}"
-
-	if istrue ${opt_all} || istrue ${opt_makedb} || { istrue ${opt_version} && ! istrue $#; }; then
-		set -- '*'
-		[ ${opt_depends} -eq 1 ] && opt_depends=0
-		opt_required_by=0
-	elif ! isempty ${opt_remove_compat_libs}; then
-		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs})
-		! istrue $# && exit 0
-	elif ! istrue $#; then
-		usage
-	fi
-
-	[ ${opt_depends} -ge 2 ] && {
-		warn "'-dd' or '-RR' option set, this mode is slow!"
-	}
 
 	parse_args ${1+"$@"}
 
