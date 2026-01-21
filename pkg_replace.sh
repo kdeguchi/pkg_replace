@@ -290,6 +290,7 @@ parse_options() {
 
 parse_args() {
 	local ARG= pkg= installed_pkg= p=
+	local file=
 
 	for ARG in ${1+"$@"}; do
 		pkg_flavor=; pkg_portdir=; pkg_origin=; pkg=;
@@ -338,7 +339,8 @@ parse_args() {
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
 			if istrue ${opt_required_by}; then
-				upgrade_pkgs="${upgrade_pkgs} $(${PKG_QUERY} '%rn-%rv' ${installed_pkg} | sort -u)"
+				file="${tmpdbdir}/$(md5 -s "${installed_pkg}").rdepend"
+				upgrade_pkgs="${upgrade_pkgs} $(get_query_from_file "${file}" || (${PKG_QUERY} '%rn-%rv' ${installed_pkg} | sort -u | tee "${file}"))"
 			fi
 			for p in ${installed_pkg}; do
 				replace_pkgs="${replace_pkgs}${pkg:+ ${p}=${pkg}}"
@@ -541,21 +543,21 @@ get_query_from_file() {
 }
 
 get_installed_pkgname() {
-	local file="${tmpdbdir}/$1.installed"
+  local file="${tmpdbdir}/$(md5 -s "$1").installed"
 	get_query_from_file "${file}" && return 0
 	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_origin_from_pkgname() {
-	local file="${tmpdbdir}/$1.origin"
+  local file="${tmpdbdir}/$(md5 -s "$1" ).origin"
 	get_query_from_file "${file}" && return 0
 	(${PKG_QUERY} -g '%o' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_flavor() {
-	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').flavor"
+	local file="${tmpdbdir}/$(md5 -s "$1").flavor"
 	get_query_from_file "${file}" && return 0
 	(${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}") && return 0
 	return 1
@@ -565,8 +567,8 @@ get_pkgname_from_portdir() {
 	local pkgname= file=
 	[ -f "${1}/Makefile" ] || return 1
 	load_make_vars
-	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_').pkgname" ||
-		file="${PKG_REPLACE_DB_DIR}/$(echo ${1} | tr '/' '_')@${pkg_flavor}.pkgname"
+	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").pkgname" ||
+		file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1")@${pkg_flavor}.pkgname"
 	pkgname=$( ([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}") || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
 	case ${pkgname} in
 	''|-)	return 1 ;;
@@ -590,14 +592,14 @@ get_portdir_from_origin() {
 }
 
 get_pkgname_from_origin() {
-	local file="${tmpdbdir}/$(echo $1 | tr '/' '_').origin"
+	local file="${tmpdbdir}/$(md5 -s "$1").origin"
 	get_query_from_file "${file}" && return 0
 	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
 	return 1
 }
 
 get_depend_pkgnames() {
-	local deps= X= pkgfile=
+	local deps= X= pkgfile= file=
 	if istrue ${opt_use_packages}; then
 		for X in $1; do
 			pkgfile="${PKGREPOSITORY}/$X${PKG_BINARY_SUFX}"
@@ -608,9 +610,10 @@ get_depend_pkgnames() {
 			fi
 		done
 	else
-		deps=$(${PKG_QUERY} '%dn-%dv' $1 | sort -u)
+		file="${tmpdbdir}/$(md5 -s "$1").depend"
+		deps="$(get_query_from_file "${file}" || (${PKG_QUERY} '%dn-%dv' $1 | sort -u | tee "${file}"))"
 		[ ${opt_depends} -ge 2 ] && {
-			deps=${deps}' '$(get_strict_depend_pkgnames "$1");
+			deps="${deps} $(get_strict_depend_pkgnames "$1")";
 		}
 	fi
 	echo ${deps} | tr '[:space:]' '\n' | sort -u
@@ -705,8 +708,8 @@ get_depend_binary_pkgnames() {
 
 get_lock() {
 	local lock=
-	local file="${tmpdbdir}/$1.lock"
-	lock=$(get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee ${file})) || return 1
+  local file="${tmpdbdir}/$(md5 -s "$1").lock"
+	lock=$(get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee "${file}")) || return 1
 	case ${lock} in
 	0)	return 1 ;;
 	1)	return 0 ;;

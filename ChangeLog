@@ -1,6 +1,7 @@
 20260121
 *Fix typo
 *Cleanup code
+*Use md5 hashes as cache file names
 
 20260120
 *Cleanup code
