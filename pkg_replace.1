@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January 21, 2026)"
-.Dd January 21, 2026
+.\" Modified by Ken DEGUCHI (January 23, 2026)"
+.Dd January 23, 2026
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -99,7 +99,7 @@ e.g. build dependencies.
 However, this mode is slow.
 So,
 .Nm
-creates files that record dependencies in the
+creates cache files that record dependencies in the
 .Ar PKG_REPLACE_DB_DIR
 directory to run as fast as possible.
 See config file,
@@ -162,32 +162,28 @@ Please see section
 .Ar EXAMPLES.
 .Pp
 .It Fl \-makedb
-Create files that record dependencies of packages in the
+Create cache files only that record dependencies of packages in the
 .Ar PKG_REPLACE_DB_DIR .
 .Pp
 .It Fl \-cleandb
-Clean files that record dependencies in the
+Clean cache files that record dependencies in the
 .Ar PKG_REPLACE_DB_DIR .
 This option should be useful when the dependencies of packages are new or modified.
 See also,
 .Fl dd , Fl RR .
 .Pp
 .It Fl \-updatedb
-Update files that record dependencies in the
+Update cache files that record dependencies in the
 .Ar PKG_REPLACE_DB_DIR .
 This is the default.
 See also,
 .Fl dd , Fl RR .
 .Pp
 .It Fl \-no-updatedb
-Do not update the
+Do not update cache files in the
 .Ar PKG_REPLACE_DB_DIR .
 This option overrides
-.Fl \-updatedb
-and
-.Nm
-do not update files in the
-.Ar PKG_REPLACE_DB_DIR .
+.Fl \-updatedb .
 See also,
 .Fl dd , Fl RR .
 .Pp
