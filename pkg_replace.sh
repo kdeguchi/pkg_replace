@@ -568,7 +568,7 @@ get_flavor() {
 get_flavors() {
 	local file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").flavors"
 	[ "${file}" -nt "$1/Makefile" ] && get_query_from_file "${file}" && return 0
-  cd "$1" && (${MAKE} -V FLAVORS | tee "${file}") && return 0
+	cd "$1" && (${MAKE} -V FLAVORS | tee "${file}") && return 0
 	return 1
 }
 
@@ -1821,7 +1821,7 @@ main() {
 		remove_compat_libs $(get_installed_pkgname ${opt_remove_compat_libs})
 		! istrue $# && exit 0
 	elif istrue ${opt_cleandb}; then
-    find ${PKG_REPLACE_DB_DIR} -type f -delete && exit 0
+		find ${PKG_REPLACE_DB_DIR} -type f -delete && exit 0
 	elif ! istrue $#; then
 		usage
 	fi
