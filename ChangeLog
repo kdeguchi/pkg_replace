@@ -1,3 +1,6 @@
+20260123
+*Improved execution speed using cache files `make -V FLAVORS`
+
 20260121
 *Fix typo
 *Cleanup code

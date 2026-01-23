@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260121
+PKG_REPLACE_VERSION=20260123
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -562,6 +562,13 @@ get_flavor() {
 	local file="${tmpdbdir}/$(md5 -s "$1").flavor"
 	get_query_from_file "${file}" && return 0
 	(${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}") && return 0
+	return 1
+}
+
+get_flavors() {
+	local file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").flavors"
+	[ "${file}" -nt "$1/Makefile" ] && get_query_from_file "${file}" && return 0
+  cd "$1" && (${MAKE} -V FLAVORS | tee "${file}") && return 0
 	return 1
 }
 
@@ -1365,9 +1372,12 @@ set_pkginfo_replace() {
 		pkg_flavor=$(get_binary_flavor "${pkg_binary}") || return 1
 	fi
 
-	if isempty $(cd ${pkg_portdir} && ${MAKE} -V FLAVORS); then
-		pkg_flavor=
-	fi
+	case " $(get_flavors "${pkg_portdir}") " in
+	[[:space:]]${pkg_flavor}[[:space:]])
+		pkg_flavor=${pkg_flavor} ;;
+	*)
+		pkg_flavor= ;;
+	esac
 
 }
 
