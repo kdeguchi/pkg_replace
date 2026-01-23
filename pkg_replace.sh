@@ -1373,7 +1373,7 @@ set_pkginfo_replace() {
 	fi
 
 	case " $(get_flavors "${pkg_portdir}") " in
-	[[:space:]]${pkg_flavor}[[:space:]])
+	*[[:space:]]${pkg_flavor}[[:space:]]*)
 		pkg_flavor=${pkg_flavor} ;;
 	*)
 		pkg_flavor= ;;
