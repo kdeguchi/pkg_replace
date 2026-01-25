@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260123
+PKG_REPLACE_VERSION=20260126
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -578,7 +578,11 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1")@${pkg_flavor}.pkgname"
-	pkgname=$( ([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}") || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
+	if ! grep -q '^MASTERDIR=' ${1}/Makefile; then
+		pkgname=$( ([ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}") || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
+	else
+		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
+	fi
 	case ${pkgname} in
 	''|-)	return 1 ;;
 	*)	echo ${pkgname}; return 0 ;;

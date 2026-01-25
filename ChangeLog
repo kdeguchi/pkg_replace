@@ -1,3 +1,6 @@
+20260126
+*Fix behavior of `pkg_replace -V`
+
 20260123
 *Improved execution speed using cache files `make -V FLAVORS`
 
