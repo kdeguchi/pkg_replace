@@ -1,7 +1,7 @@
 .\" $Id: pkg_replace.1,v 1.2 2007/01/25 12:25:56 securedog Exp $
 .\"
-.\" Modified by Ken DEGUCHI (January 23, 2026)"
-.Dd January 23, 2026
+.\" Modified by Ken DEGUCHI (January 26, 2026)"
+.Dd January 26, 2026
 .Dt PKG_REPLACE 1
 .Os
 .Sh NAME
@@ -56,14 +56,19 @@ Do with all the installed packages.
 Set automatic flag for the package.
 This affects the operation of pkg-autoremove(8).
 .Pp
+.It Fl B , Fl \-no-backup
+Do not backup old packages before uninstall old packages.
+.Pp
 .It Fl b , Fl \-backup-package
 Keep backup packages of the old versions.
 By default, the created backup package will be deleted after installation.
 See also,
 .Fl \-no-backup-package
 .Pp
-.It Fl B , Fl \-no-backup
-Do not backup old packages before uninstall old packages.
+.It Fl \-no-backup-package
+Do not keep backup packages the old versions.
+Override
+.Fl b Fl \-backup-package .
 .Pp
 .It Fl \-batch
 Run an upgrading process in a batch mode (with BATCH=yes).
@@ -74,6 +79,14 @@ Do
 before build.
 See also,
 .Fl \-no-config .
+.Pp
+.It Fl \-no-config
+Do not
+.Dq Li make config-conditional
+bofore build.
+Override
+.Fl \-config .
+.Pp
 .It Fl C , Fl \-force-config
 Do
 .Dq Li make config
@@ -81,12 +94,27 @@ before build.
 See also,
 .Fl \-no-force-config .
 .Pp
+.It Fl \-no-force-config
+Do not
+.Dq Li make config
+bofore build.
+Override
+.Fl \-force-config .
+.Pp
 .It Fl \-clean
 Do
 .Dq Li make clean
 before build.
 See also,
 .Fl w , Fl \-no-clean .
+.Pp
+.It Fl \-cleanup
+Do
+.Dq Li make clean
+after build.
+This is the default.
+See also,
+.Fl W , Fl \-no-cleanup .
 .Pp
 .It Fl d , Fl R
 In addition to the specified packages,
@@ -122,11 +150,11 @@ Execute with
 .Dq Li set -x
 option.
 .Pp
-.It Fl f
-Force to replace packages.
-.Pp
 .It Fl F
 Fetch distfiles or packages, do not replace.
+.Pp
+.It Fl f
+Force to replace packages.
 .Pp
 .It Fl h
 Show help and exit.
@@ -134,15 +162,19 @@ Show help and exit.
 .It Fl i
 Turn on interactive mode.
 .Pp
+.It Fl J
+Do not install the target packages, but install the dependencies.
+.Pp
 .It Fl j Ar jobs
 Number of parallel jobs.
 Default value gets from `sysctl -n hw.ncpu`.
 .Pp
-.It Fl J
-Do not install the target packages, but install the dependencies.
-.Pp
 .It Fl k
 Force the upgrade of a package even if some of the requisite packages have failed to upgrade in advance.
+.Pp
+.It Fl L Ar PREFIX
+Save the logs in the files that begins with
+.Ar PREFIX .
 .Pp
 .It Fl l Ar FILE
 Save the results to
@@ -151,9 +183,6 @@ By default,
 .Nm
 does not save results.
 .Pp
-.It Fl L Ar PREFIX
-Save the logs in the files that begins with
-.Ar PREFIX .
 .It Fl m Ar ARGS
 Specify arguments to append to each
 .Xr make 1
@@ -192,52 +221,18 @@ Specify arguments to prepend to each
 .Xr make 1
 command.
 .Pp
-.It Fl \-cleanup
-Do
-.Dq Li make clean
-after build.
-This is the default.
-See also,
-.Fl W , Fl \-no-cleanup .
+.It Fl N
+Install new packages, do not replace.
 .Pp
 .It Fl n
 Do not actually replace any packages.
-.It Fl \-no-backup-package
-Do not keep backup packages the old versions.
-Override
-.Fl b .
 .Pp
 .It Fl \-no-configfile
 Do not read the configuration file
 .Ar pkg_replace.conf .
 .Pp
-.It Fl \-no-config
-Do not
-.Dq Li make config-conditional
-bofore build.
-Override
-.Fl \-config .
-.Pp
-.It Fl \-no-force-config
-Do not
-.Dq Li make config
-bofore build.
-Override
-.Fl \-force-config .
-.Pp
-.It Fl \-no-verbose
-Turn off verbose output.
-Override
-.Fl v , Fl \-verbose .
-.It Fl N
-Install new packages, do not replace.
-.Pp
 .It Fl O
 Do not check the dependencies before building the target packages.
-.Pp
-.It Fl p
-Do
-.Dq Li make package .
 .Pp
 .It Fl P
 Use binary packages instead of installing from source.
@@ -250,6 +245,10 @@ and the remote site specified by
 .It Fl PP
 Be forced to use binary packages.
 Never use the port even if a package is not available either locally or remotely.
+.Pp
+.It Fl p
+Do
+.Dq Li make package .
 .Pp
 .It Fl r
 In addition to the specified packages,
@@ -272,14 +271,26 @@ preserves old shared libraries in
 But if the new library and the old library have the same name, the old library is removed from
 .Va PKGCOMPATDIR .
 .Pp
-.It Fl v , Fl \-verbose
-Turn on verbose output.
-.Pp
 .It Fl V
 List the installed packages that need updating.
 .Pp
+.It Fl v , Fl \-verbose
+Turn on verbose output.
+.Pp
+.It Fl \-no-verbose
+Turn off verbose output.
+Override
+.Fl v , Fl \-verbose .
+.Pp
 .It Fl \-version
 Print pkg_replace version.
+.Pp
+.It Fl W , Fl \-no-cleanup
+Do not
+.Dq Li make clean
+after each installation.
+See also,
+.Fl \-cleanup
 .Pp
 .It Fl w , Fl \-no-clean
 Do not
@@ -289,22 +300,15 @@ This is the default.
 See also,
 .Fl \-clean
 .Pp
-.It Fl W , Fl \-no-cleanup
-Do not
-.Dq Li make clean
-after each installation.
-See also,
-.Fl \-cleanup
-.Pp
-.It Fl x Ar glob
-Do not replace packages matching the specified glob pattern.
-.Pp
 .It Fl X Ar glob
 Remove the libraries in
 .Va PKGCOMPATDIR ,
 when the specified packages have the libraries with the same name as the one in
 .Va PKGCOMPATDIR .
 This may be useful when there are errors due to a mixture of old and new libraries.
+.Pp
+.It Fl x Ar glob
+Do not replace packages matching the specified glob pattern.
 .Pp
 .El
 .Sh VARIABLES
