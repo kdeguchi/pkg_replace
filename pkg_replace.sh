@@ -605,14 +605,14 @@ get_portdir_from_origin() {
 	for overlay in ${OVERLAYS} ${PORTSDIR}; do
 		[ -f "${overlay}/$1/Makefile" ] && echo "${overlay}/$1" && return 0
 	done
-	return 1
+	echo "$1" && return 1
 }
 
 get_pkgname_from_origin() {
 	local pkgname=
 	local file="${tmpdbdir}/$(md5 -s "$1").origin"
 	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
-	isempty ${pkgname} && return 1
+	isempty ${pkgname} && echo "$1" && return 1
 	echo ${pkgname} | tee "${file}" && return 0
 }
 
