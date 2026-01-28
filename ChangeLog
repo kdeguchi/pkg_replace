@@ -1,3 +1,7 @@
+20260128
+*Fix issue with -N mode
+*Cleanup code
+
 20260127
 *Changed the behavior of get_pkgname_from_portdir() to detect updated ports
 

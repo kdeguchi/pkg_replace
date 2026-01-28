@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260127
+PKG_REPLACE_VERSION=20260128
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -307,7 +307,7 @@ parse_args() {
 		case ${ARG} in
 		*${PKG_BINARY_SUFX})
 			[ ! -e "${ARG}" ] && warn "'${ARG}' does not exist." && continue
-			get_installed_pkgname $(get_binary_pkgname "${ARG}") > /dev/null 2>&1 &&
+			check_installed $(get_binary_pkgname "${ARG}") &&
 				install_pkgs="${install_pkgs} ${ARG}" && continue
 			;;
 		*@*/*)	;;
@@ -538,6 +538,11 @@ load_env_vars() {
 	ARCH=$3
 }
 
+check_installed() {
+	${PKG_INFO} -e $1 && return 0
+	return 1
+}
+
 get_query_from_file() {
 	[ -f "$1" ] || return 1
 	cat "$1" && return 0
@@ -545,17 +550,19 @@ get_query_from_file() {
 }
 
 get_installed_pkgname() {
+	local pkgname=
 	local file="${tmpdbdir}/$(md5 -s "$1").installed"
-	get_query_from_file "${file}" && return 0
-	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
-	return 1
+	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
+	isempty ${pkgname} && return 1
+	echo ${pkgname} | tee "${file}" && return 0
 }
 
 get_origin_from_pkgname() {
+	local origin=
 	local file="${tmpdbdir}/$(md5 -s "$1" ).origin"
-	get_query_from_file "${file}" && return 0
-	(${PKG_QUERY} -g '%o' $1 | tee "${file}") && return 0
-	return 1
+	origin=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%o' $1)
+	isempty ${origin} && return 1
+	echo ${origin} | tee "${file}" && return 0
 }
 
 get_flavor() {
@@ -607,10 +614,11 @@ get_portdir_from_origin() {
 }
 
 get_pkgname_from_origin() {
+	local pkgname=
 	local file="${tmpdbdir}/$(md5 -s "$1").origin"
-	get_query_from_file "${file}" && return 0
-	(${PKG_QUERY} -g '%n-%v' $1 | tee "${file}") && return 0
-	return 1
+	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
+	isempty ${pkgname} && return 1
+	echo ${pkgname} | tee "${file}" && return 0
 }
 
 get_depend_pkgnames() {
@@ -1896,7 +1904,7 @@ main() {
 	else
 		# check installed package
 		for X in ${upgrade_pkgs}; do
-			get_installed_pkgname $X > /dev/null 2>&1 || {
+			check_installed $X || {
 				install_pkgs="${install_pkgs} $X";
 				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s| $X | |g");
 			}
