@@ -609,7 +609,9 @@ get_overlay_dir() {
 }
 
 get_portdir_from_origin() {
-	echo "$(get_overlay_dir "$1")/$1" && return 0
+	local portdir=
+	portdir="$(get_overlay_dir "$1")/$1"
+	[ -d ${portdir} ] && echo ${portdir} && return 0
 	return 1
 }
 
