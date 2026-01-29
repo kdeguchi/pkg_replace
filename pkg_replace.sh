@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260128
+PKG_REPLACE_VERSION=20260129
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -124,6 +124,7 @@ init_options() {
 }
 
 init_variables() {
+	: ${ORIG_PWD="${PWD}"}
 	: ${MAKE="make"}
 	: ${PORTSDIR="$(${PKG_CONFIG} PORTSDIR)"}
 	: ${OVERLAYS="$(cd "${PORTSDIR}" && ${MAKE} -V OVERLAYS)"}
@@ -827,17 +828,20 @@ remove_dir() {
 }
 
 expand_path() {
+	local pwd="${PWD}"
+	cd "${ORIG_PWD}"
 	case "$1" in
 	[!/]*)
 		if [ -d "$1" ]; then
-			echo $( cd "$1" && pwd ) && return 0
+			echo $( cd "$1" && pwd )
 		elif [ -e "$1" ]; then
-			echo $( cd $( dirname "$1" ) && pwd )/$( basename "$1" ) && return 0
+			echo $( cd $( dirname "$1" ) && pwd )/$( basename "$1" )
 		else
 			warn "'$1' is not found!"; return 1
 		fi ;;
-	*)	echo $1 ;;
+	*)	[ -e "$1" ] && echo $1 ;;
 	esac
+	cd "${pwd}"
 }
 
 try() {
