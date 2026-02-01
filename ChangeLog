@@ -1,3 +1,6 @@
+20260201
+*Changed the behavior of get_pkgname_from_portdir() to detect updated ports
+
 20260129
 *Fix behavior of relative path processin in expand_path()
 
