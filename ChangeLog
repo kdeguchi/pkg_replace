@@ -1,3 +1,11 @@
+20260209
+*Changed the behavior option "-dd" using with option "-x"
+ For example, when package foo and bar have loop dependencies, specifying
+ the option "-x foo" excludes foo from the dependency check as follows.
+ `pkg_replace -x foo -dd bar`
+*Changed the behavior of get_pkgname_from_portdir() to detect updated ports
+ checking with distinfo.
+
 20260201
 *Changed the behavior of get_pkgname_from_portdir() to detect updated ports
 

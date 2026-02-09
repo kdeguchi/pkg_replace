@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260201
+PKG_REPLACE_VERSION=20260209
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -586,7 +586,7 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1")@${pkg_flavor}.pkgname"
-	if [ "${1}/Makefile" -nt "${file}" ]; then
+	if [ "${1}/Makefile" -nt "${file}" ] || [ "${1}/distinfo" -nt "${file}" ]; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
 	elif grep -E -q '^MASTERDIR=|\.include .*\.CURDIR.*(Makefile|\.mk)|^USES=.*kmod' "${1}/Makefile"; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
@@ -668,6 +668,7 @@ get_strict_depend_pkgnames() {
 	done
 
 	deps=$(echo ${deps} | tr '[:space:]' '\n' | sort -u)
+	deps=$(remove_exclude_pkg ${deps})
 	dels=$(echo ${dels} | tr '[:space:]' '\n' | sort -u)
 
 	for origin in ${deps}; do
@@ -738,6 +739,24 @@ get_lock() {
 get_subpackage() {
 	isempty $(${PKG_ANNOTATE} --show --quiet $1 subpackage) && return 1
 	return 0
+}
+
+remove_exclude_pkg() {
+	local ARG ARGV X
+	isempty ${opt_exclude} && echo $@ && return 0
+	ARGV=
+	for ARG in $@; do
+		for X in ${opt_exclude}; do
+			case "|${ARG}|${ARG##*/}|" in
+			*\|${X}\|*)	continue 2 ;;
+			esac
+			case "|${ARG}|${ARG%-*}|" in
+			*\|${X}\|*)	continue 2 ;;
+			esac
+		done
+		ARGV="${ARGV} ${ARG}"
+	done
+	echo ${ARGV} && return 0
 }
 
 pkg_sort() {
@@ -1858,28 +1877,8 @@ main() {
 
 	istrue ${opt_makedb} && exit 0
 
-	if ! isempty ${opt_exclude}; then
-		ARGV=
-		for ARG in ${install_pkgs}; do
-			for X in ${opt_exclude}; do
-				case "|${ARG}|${ARG##*/}|" in
-					*\|${X}\|*)	continue 2 ;;
-				esac
-			done
-			ARGV="${ARGV} ${ARG}"
-		done
-		install_pkgs=${ARGV}
-		ARGV=
-		for ARG in ${upgrade_pkgs}; do
-			for X in ${opt_exclude}; do
-				case "|${ARG}|${ARG%-*}|" in
-					*\|${X}\|*)	continue 2 ;;
-				esac
-			done
-			ARGV="${ARGV} ${ARG}"
-		done
-		upgrade_pkgs=${ARGV}
-	fi
+	install_pkgs=$(remove_exclude_pkg ${install_pkgs})
+	upgrade_pkgs=$(remove_exclude_pkg ${upgrade_pkgs})
 
 	if isempty ${install_pkgs} && isempty ${upgrade_pkgs}; then
 		exit 1
