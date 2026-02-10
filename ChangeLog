@@ -1,3 +1,7 @@
+20260210
+*Fix behavior attempting to install packages that are not installed
+ with options "-dd" and "-a".
+
 20260209
 *Changed the behavior option "-dd" using with option "-x"
  For example, when package foo and bar have loop dependencies, specifying

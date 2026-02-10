@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260209
+PKG_REPLACE_VERSION=20260210
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -678,7 +678,7 @@ get_strict_depend_pkgnames() {
 		esac
 	done
 
-	isempty ${cut_deps} || echo $(get_pkgname_from_origin "${cut_deps}")
+	isempty ${cut_deps} || echo $(get_pkgname_from_origin "${cut_deps}" | grep  -v '/')
 
 	return 0
 }
@@ -1904,7 +1904,7 @@ main() {
 		for X in ${upgrade_pkgs}; do
 			check_installed $X || {
 				install_pkgs="${install_pkgs} $X";
-				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s| $X | |g");
+				upgrade_pkgs=$(echo ${upgrade_pkgs} | sed "s|[[:space:]]$X[[:space:]]| |g");
 			}
 		done
 
