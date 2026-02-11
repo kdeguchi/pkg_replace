@@ -575,7 +575,7 @@ get_flavor() {
 
 get_flavors() {
 	local file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").flavors"
-	[ "${file}" -nt "$1/Makefile" ] && get_query_from_file "${file}" && return 0
+	[ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" && return 0
 	cd "$1" && (${MAKE} -V FLAVORS | tee "${file}") && return 0
 	return 1
 }
@@ -586,7 +586,9 @@ get_pkgname_from_portdir() {
 	load_make_vars
 	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").pkgname" ||
 		file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1")@${pkg_flavor}.pkgname"
-	if [ "${1}/Makefile" -nt "${file}" ] || [ "${1}/distinfo" -nt "${file}" ]; then
+	if [ "${file}" -nt "${tmpdbdir}/start" ]; then
+		pkgname=$(get_query_from_file "${file}")
+	elif [ "${1}/Makefile" -nt "${file}" ] || [ "${1}/distinfo" -nt "${file}" ]; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
 	elif grep -E -q '^MASTERDIR=|^\.include ".*"|^USES=.*kmod' "${1}/Makefile"; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
@@ -1865,6 +1867,7 @@ main() {
 	create_tmpdir && init_result || exit 1
 	tmpdbdir=${tmpdir}/db
 	create_dir ${tmpdbdir}
+	touch ${tmpdbdir}/start
 	set_signal_int='set_result "${ARG:-XXX}" failed "aborted"'
 	set_signal_exit=${set_signal_exit}'show_result; write_result "${opt_result}"; clean_tmpdir; '
 	set_signal_handlers
