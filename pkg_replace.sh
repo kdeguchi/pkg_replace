@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260212
+PKG_REPLACE_VERSION=20260219
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -613,7 +613,7 @@ get_portdir_from_origin() {
 
 get_pkgname_from_origin() {
 	local pkgname=
-	local file="${tmpdbdir}/$(md5 -s "$1").origin"
+	local file="${tmpdbdir}/$(md5 -s "$1").pkgname"
 	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
 	isempty ${pkgname} && echo "$1" && return 1
 	echo ${pkgname} | tee "${file}" && return 0
