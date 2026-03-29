@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260317
+PKG_REPLACE_VERSION=20260330
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -342,7 +342,7 @@ parse_args() {
 			fi
 			upgrade_pkgs="${upgrade_pkgs} ${installed_pkg}"
 			if istrue ${opt_required_by}; then
-				file="${tmpdbdir}/$(md5 -s "${installed_pkg}").rdepend"
+				file=$(get_cache_filename "${tmpdbdir}" "${installed_pkg}" ".rdepend")
 				upgrade_pkgs="${upgrade_pkgs} $(get_query_from_file "${file}" || (${PKG_QUERY} '%rn-%rv' ${installed_pkg} | sort -u | tee "${file}"))"
 			fi
 			for p in ${installed_pkg}; do
@@ -550,9 +550,13 @@ get_query_from_file() {
 	return 1
 }
 
+get_cache_filename() {
+	echo "$1/"$(md5 -s "$2")"$3"
+}
+
 get_installed_pkgname() {
 	local pkgname=
-	local file="${tmpdbdir}/$(md5 -s "$1").installed"
+	local file=$(get_cache_filename "${tmpdbdir}" "$1" ".installed")
 	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
 	isempty ${pkgname} && return 1
 	echo ${pkgname} | tee "${file}" && return 0
@@ -560,21 +564,21 @@ get_installed_pkgname() {
 
 get_origin_from_pkgname() {
 	local origin=
-	local file="${tmpdbdir}/$(md5 -s "$1" ).origin"
+	local file=$(get_cache_filename "${tmpdbdir}" "$1" ".origin")
 	origin=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%o' $1)
 	isempty ${origin} && return 1
 	echo ${origin} | tee "${file}" && return 0
 }
 
 get_flavor() {
-	local file="${tmpdbdir}/$(md5 -s "$1").flavor"
+	local file=$(get_cache_filename "${tmpdbdir}" "$1" ".flavor")
 	get_query_from_file "${file}" && return 0
 	(${PKG_ANNOTATE} --quiet --show "$1" flavor | tee "${file}") && return 0
 	return 1
 }
 
 get_flavors() {
-	local file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").flavors"
+	local file=$(get_cache_filename "${PKG_REPLACE_DB_DIR}" "$1" ".flavors")
 	[ "${file}" -nt "${1}/Makefile" ] && get_query_from_file "${file}" && return 0
 	cd "$1" && (${MAKE} -V FLAVORS | tee "${file}") && return 0
 	return 1
@@ -584,13 +588,13 @@ get_pkgname_from_portdir() {
 	local pkgname= file=
 	[ -f "${1}/Makefile" ] || return 1
 	load_make_vars
-	isempty ${pkg_flavor} && file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1").pkgname" ||
-		file="${PKG_REPLACE_DB_DIR}/$(md5 -s "$1")@${pkg_flavor}.pkgname"
+	isempty ${pkg_flavor} && file=$(get_cache_filename "${PKG_REPLACE_DB_DIR}" "$1" ".pkgname") ||
+		file=$(get_cache_filename "${PKG_REPLACE_DB_DIR}" "$1" "@${pkg_flavor}.pkgname")
 	if [ "${file}" -nt "${tmpdbdir}/start" ]; then
 		pkgname=$(get_query_from_file "${file}")
 	elif [ "${1}/Makefile" -nt "${file}" ] || [ "${1}/distinfo" -nt "${file}" ]; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
-	elif grep -E -q '^MASTERDIR=|^\.include ".*"|^USES=.*kmod' "${1}/Makefile"; then
+	elif grep -m1 -q -e '^MASTERDIR=' -e '^\.include ".*"' -e '|^USES=.*kmod' "${1}/Makefile"; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
 	else
 		pkgname=$( get_query_from_file "${file}" || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
@@ -613,7 +617,7 @@ get_portdir_from_origin() {
 
 get_pkgname_from_origin() {
 	local pkgname=
-	local file="${tmpdbdir}/$(md5 -s "$1").pkgname"
+	local file=$(get_cache_filename "${tmpdbdir}" "$1" ".pkgname")
 	pkgname=$(get_query_from_file "${file}" || ${PKG_QUERY} -g '%n-%v' $1)
 	isempty ${pkgname} && echo "$1" && return 1
 	echo ${pkgname} | tee "${file}" && return 0
@@ -631,7 +635,7 @@ get_depend_pkgnames() {
 			fi
 		done
 	else
-		file="${tmpdbdir}/$(md5 -s "$1").depend"
+		file=$(get_cache_filename "${tmpdbdir}" "$1" ".depend")
 		deps="$(get_query_from_file "${file}" || (${PKG_QUERY} '%dn-%dv' $1 | sort -u | tee "${file}"))"
 		[ ${opt_depends} -ge 2 ] && {
 			deps="${deps} $(get_strict_depend_pkgnames "$1")";
@@ -730,7 +734,7 @@ get_depend_binary_pkgnames() {
 
 get_lock() {
 	local lock=
-	local file="${tmpdbdir}/$(md5 -s "$1").lock"
+	local file=$(get_cache_filename "${tmpdbdir}" "$1" ".lock")
 	lock=$(get_query_from_file ${file} || (${PKG_QUERY} '%k' $1 | tee "${file}")) || return 1
 	case ${lock} in
 	0)	return 1 ;;
@@ -1149,11 +1153,11 @@ clean_libs() {
 
 parse_moved() {
 	local new_origin= portdir=
-	local date= why= X=
+	local date= why= X= checked=
 
 	local ret=$1; eval $1=
 	local info=$2; eval $2=
-	local origin=$3; checked=
+	local origin=$3
 
 	local IFS='|'
 
