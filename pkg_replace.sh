@@ -551,7 +551,7 @@ get_query_from_file() {
 }
 
 get_cache_filename() {
-	echo "$1/"$(md5 -s "$(echo "$2" | cut -c 1-4095)")"$3"
+	echo "$1/"$(md5 -s "$(echo $2 | cut -c 1-4095)")"$3"
 }
 
 get_installed_pkgname() {
