@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260502
+PKG_REPLACE_VERSION=20260503
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -551,7 +551,7 @@ get_query_from_file() {
 }
 
 get_cache_filename() {
-	echo "$1/"$(md5 -s "$(echo $2 | cut -c 1-4095)")"$3"
+	echo "$1/"$( echo "$2" | md5 )"$3"
 }
 
 get_installed_pkgname() {
