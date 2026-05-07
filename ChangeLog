@@ -1,3 +1,6 @@
+20260505
+*MAKE_JOBS_NUMBER_LIMIST -> MAKE_JOBS_NUMBER.
+
 20260503
 *Fix error "md5: File name too long"
 

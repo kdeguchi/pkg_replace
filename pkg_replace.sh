@@ -21,7 +21,7 @@
 # - Cleanup Code
 
 
-PKG_REPLACE_VERSION=20260503
+PKG_REPLACE_VERSION=20260505
 PKG_REPLACE_CONFIG=FreeBSD
 
 usage() {
@@ -520,7 +520,7 @@ load_make_vars() {
 	! isempty "${pkg_flavor}" && PKG_MAKE_ARGS="${PKG_MAKE_ARGS} FLAVOR=${pkg_flavor}"
 	get_config PKG_MAKE_ENV MAKE_ENV
 	! isempty "${opt_maxjobs}" &&
-		PKG_MAKE_ENV="${PKG_MAKE_ENV} MAKE_JOBS_NUMBER_LIMIT=${opt_maxjobs}"
+		PKG_MAKE_ENV="${PKG_MAKE_ENV} MAKE_JOBS_NUMBER=${opt_maxjobs}"
 	PKG_MAKE_ENV="${opt_make_env:+${opt_make_env} }${PKG_MAKE_ENV}"
 	! isempty "${PKG_MAKE_ENV}" && PKG_MAKE_ENV="env ${PKG_MAKE_ENV} "
 	PKG_MAKE="${PKG_MAKE_ENV}${MAKE}${PKG_MAKE_ARGS:+ ${PKG_MAKE_ARGS}}"
