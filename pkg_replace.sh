@@ -594,7 +594,7 @@ get_pkgname_from_portdir() {
 		pkgname=$(get_query_from_file "${file}")
 	elif [ "${1}/Makefile" -nt "${file}" ] || [ "${1}/distinfo" -nt "${file}" ]; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
-	elif grep -m1 -q -e '^MASTERDIR=' -e '^\.include ".*"' -e '|^USES=.*kmod' "${1}/Makefile"; then
+	elif grep -m1 -q -e '^MASTERDIR=' -e '^\.include ".*"' -e '^USES=.*kmod' "${1}/Makefile"; then
 		pkgname=$(cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}")
 	else
 		pkgname=$( get_query_from_file "${file}" || (cd "$1" && ${PKG_MAKE} -V PKGNAME | tee "${file}") )
